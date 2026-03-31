@@ -24,6 +24,8 @@ public class CrimeCodeDbContext : DbContext
     public DbSet<UserFollow> UserFollows => Set<UserFollow>();
     public DbSet<PostAttachment> PostAttachments => Set<PostAttachment>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<MarketplaceOrder> MarketplaceOrders => Set<MarketplaceOrder>();
+    public DbSet<VendorApplication> VendorApplications => Set<VendorApplication>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -189,6 +191,52 @@ public class CrimeCodeDbContext : DbContext
              .OnDelete(DeleteBehavior.Restrict);
         });
 
+        // MarketplaceOrder
+        modelBuilder.Entity<MarketplaceOrder>(e =>
+        {
+            e.Property(o => o.Amount).HasColumnType("decimal(18,8)");
+
+            e.HasOne(o => o.Listing)
+             .WithMany(l => l.Orders)
+             .HasForeignKey(o => o.ListingId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(o => o.Buyer)
+             .WithMany(u => u.BuyerOrders)
+             .HasForeignKey(o => o.BuyerId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(o => o.Seller)
+             .WithMany(u => u.SellerOrders)
+             .HasForeignKey(o => o.SellerId)
+             .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // MarketplaceListing
+        modelBuilder.Entity<MarketplaceListing>(e =>
+        {
+            e.Property(l => l.PriceCrypto).HasColumnType("decimal(18,8)");
+
+            e.HasOne(ml => ml.Seller)
+             .WithMany(u => u.MarketplaceListings)
+             .HasForeignKey(ml => ml.SellerId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(ml => ml.Category)
+             .WithMany(c => c.MarketplaceListings)
+             .HasForeignKey(ml => ml.CategoryId)
+             .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // VendorApplication
+        modelBuilder.Entity<VendorApplication>(e =>
+        {
+            e.HasOne(va => va.User)
+             .WithMany()
+             .HasForeignKey(va => va.UserId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
         // Seed categories (with sections/subsections)
         modelBuilder.Entity<Category>().HasData(
             // Main sections
@@ -197,7 +245,7 @@ public class CrimeCodeDbContext : DbContext
             new Category { Id = 3, Name = "Programmazione", Description = "Linguaggi, framework e development", Icon = "💻", SortOrder = 3 },
             new Category { Id = 4, Name = "Networking", Description = "Reti, protocolli e infrastrutture", Icon = "🌐", SortOrder = 4 },
             new Category { Id = 5, Name = "Reverse Engineering", Description = "Analisi binaria e malware analysis", Icon = "🔍", SortOrder = 5 },
-            new Category { Id = 6, Name = "Marketplace", Description = "Compra, vendi e scambia servizi e risorse", Icon = "🛒", SortOrder = 6, IsMarketplace = true },
+            new Category { Id = 6, Name = "Marketplace", Description = "Il marketplace principale - acquista e vendi", Icon = "🛒", SortOrder = 0, IsMarketplace = true },
             new Category { Id = 7, Name = "Off-Topic", Description = "Tutto ciò che non rientra nelle altre categorie", Icon = "🎲", SortOrder = 7 },
             // Sub-categories
             new Category { Id = 8, Name = "Presentazioni", Description = "Presentati alla community", Icon = "👋", SortOrder = 1, ParentId = 1 },
@@ -208,8 +256,11 @@ public class CrimeCodeDbContext : DbContext
             new Category { Id = 13, Name = "Web Development", Description = "Frontend, Backend, Full Stack", Icon = "🌍", SortOrder = 1, ParentId = 3 },
             new Category { Id = 14, Name = "Python", Description = "Scripts, automazione e tool in Python", Icon = "🐍", SortOrder = 2, ParentId = 3 },
             new Category { Id = 15, Name = "Tools & Scripts", Description = "Tool personalizzati e script utili", Icon = "🔧", SortOrder = 3, ParentId = 3 },
-            new Category { Id = 16, Name = "Servizi Digitali", Description = "Servizi e consulenze", Icon = "💼", SortOrder = 1, ParentId = 6, IsMarketplace = true },
-            new Category { Id = 17, Name = "Risorse & Guide", Description = "E-book, corsi e materiale formativo", Icon = "📚", SortOrder = 2, ParentId = 6, IsMarketplace = true }
+            // Marketplace sub-categories
+            new Category { Id = 16, Name = "Servizi Digitali", Description = "Software, accounts e servizi digitali", Icon = "💼", SortOrder = 1, ParentId = 6, IsMarketplace = true },
+            new Category { Id = 17, Name = "Risorse & Guide", Description = "E-book, corsi e materiale formativo", Icon = "📚", SortOrder = 2, ParentId = 6, IsMarketplace = true },
+            new Category { Id = 18, Name = "Prodotti Fisici", Description = "Articoli fisici con spedizione", Icon = "📦", SortOrder = 3, ParentId = 6, IsMarketplace = true },
+            new Category { Id = 19, Name = "Servizi Custom", Description = "Servizi personalizzati su richiesta", Icon = "⚙️", SortOrder = 4, ParentId = 6, IsMarketplace = true }
         );
 
         // Seed thread tags

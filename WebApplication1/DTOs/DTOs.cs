@@ -70,9 +70,29 @@ public record GiveReputationRequest(int UserId, int Points, string? Comment);
 public record ReputationDto(int Id, int Points, string? Comment, DateTime CreatedAt, string GiverName, int GiverId, string ReceiverName, int ReceiverId);
 
 // --- Marketplace ---
-public record CreateListingRequest(string Title, string Description, int Price, string Type, int CategoryId);
-public record ListingDto(int Id, string Title, string Description, int Price, string Type, string Status, 
-    DateTime CreatedAt, string SellerName, int SellerId, string? SellerAvatarUrl, string CategoryName);
+public record CreateListingRequest(string Title, string Description, decimal PriceCrypto, string Currency, string Type, string DeliveryType, int CategoryId, string? DigitalContent, string? ShippingInfo, string? ImageUrl, int Stock);
+public record ListingDto(int Id, string Title, string Description, decimal PriceCrypto, string Currency, string Type, string Status, string DeliveryType,
+    DateTime CreatedAt, string SellerName, int SellerId, string? SellerAvatarUrl, bool IsVendor, string CategoryName, int CategoryId,
+    string? ImageUrl, int Stock, int SoldCount, string? RejectionReason, string? ShippingInfo);
+public record ListingDetailDto(int Id, string Title, string Description, decimal PriceCrypto, string Currency, string Type, string Status, string DeliveryType,
+    DateTime CreatedAt, string SellerName, int SellerId, string? SellerAvatarUrl, bool IsVendor, string CategoryName, int CategoryId,
+    string? ImageUrl, int Stock, int SoldCount, string? ShippingInfo, int SellerReputation, int SellerSalesCount, string? VendorBio);
+
+// --- Vendor ---
+public record VendorApplicationRequest(string TelegramUsername, string Motivation, string? Specialization);
+public record VendorApplicationDto(int Id, int UserId, string Username, string? AvatarUrl, string TelegramUsername, string Motivation, string? Specialization, string Status, string? ReviewNote, DateTime CreatedAt, DateTime? ReviewedAt);
+public record VendorReviewRequest(string Status, string? ReviewNote); // Approved or Rejected
+public record VendorProfileDto(int Id, string Username, string? AvatarUrl, string? VendorBio, DateTime? VendorSince, int ReputationScore, int TotalSales, int ActiveListings, decimal TotalRevenue);
+
+// --- Orders / Escrow ---
+public record CreateOrderRequest(int ListingId, int Quantity, string? ShippingAddress);
+public record OrderDto(int Id, int ListingId, string ListingTitle, string? ListingImageUrl, int BuyerId, string BuyerName, int SellerId, string SellerName, 
+    decimal Amount, string Currency, int Quantity, string Status, string EscrowStatus, string DeliveryType,
+    string? ShippingAddress, string? TrackingNumber, bool IsDelivered, string? EscrowWalletAddress,
+    string? DigitalDeliveryContent, string? DisputeReason, DateTime CreatedAt, DateTime? UpdatedAt);
+public record FundEscrowRequest(string BuyerTxId);
+public record ShipOrderRequest(string TrackingNumber);
+public record DisputeOrderRequest(string Reason);
 
 // --- Shoutbox ---
 public record ShoutboxDto(int Id, string Content, DateTime CreatedAt, string AuthorName, int AuthorId, string? AuthorAvatarUrl, string AuthorRole);

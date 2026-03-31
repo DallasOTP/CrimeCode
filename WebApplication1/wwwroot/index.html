@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CrimeCode — Underground Forum</title>
+    <title>CrimeCode — Underground Market</title>
     <link rel="icon" type="image/png" href="img/logo.png">
     <link rel="stylesheet" href="css/style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -40,8 +40,9 @@
 
             <!-- Navigation Links -->
             <nav class="main-nav" id="mainNav">
-                <a href="#" onclick="navigate('home')" class="nav-link active" data-page="home">🏠 Home</a>
-                <a href="#" onclick="navigate('marketplace')" class="nav-link" data-page="marketplace">🛒 Marketplace</a>
+                <a href="#" onclick="navigate('marketplace')" class="nav-link active" data-page="marketplace">🛒 Market</a>
+                <a href="#" onclick="navigate('vendors')" class="nav-link" data-page="vendors">🏪 Venditori</a>
+                <a href="#" onclick="navigate('home')" class="nav-link" data-page="home">💬 Forum</a>
                 <a href="#" onclick="navigate('leaderboard')" class="nav-link" data-page="leaderboard">🏆 Leaderboard</a>
                 <a href="#" onclick="navigate('members')" class="nav-link" data-page="members">👥 Membri</a>
             </nav>
@@ -76,6 +77,9 @@
                         <a href="#" onclick="navigate('profile',{id:currentUser?.userId})">👤 Profilo</a>
                         <a href="#" onclick="navigate('messages')">✉️ Messaggi</a>
                         <a href="#" onclick="navigate('notifications')">🔔 Notifiche</a>
+                        <a href="#" onclick="navigate('myOrders')">📋 Ordini</a>
+                        <a href="#" id="vendorPanelLink" style="display:none" onclick="navigate('myListings')">📦 Vendor Panel</a>
+                        <div class="dropdown-divider"></div>
                         <a href="#" onclick="showModal('newThread')">📝 Nuovo Thread</a>
                         <div class="dropdown-divider"></div>
                         <a href="#" onclick="showModal('avatar')">📷 Avatar</a>
@@ -172,14 +176,63 @@
             <div id="messagesContent"></div>
         </div>
 
-        <!-- Marketplace -->
+        <!-- Marketplace (Main page) -->
         <div id="pageMarketplace" style="display:none">
-            <div class="page-header-row">
-                <h2>🛒 Marketplace</h2>
+            <div class="market-hero">
+                <h1>🛒 CrimeCode Market</h1>
+                <p>Il marketplace underground — Compra e vendi in crypto con escrow sicuro</p>
+                <div class="market-stats" id="marketStats"></div>
+            </div>
+            <div class="market-actions">
                 <button class="btn btn-primary" onclick="showModal('newListing')" id="newListingBtn" style="display:none">+ Nuovo Annuncio</button>
+                <button class="btn btn-accent" onclick="showModal('vendorApply')" id="vendorApplyBtn" style="display:none">🏪 Diventa Venditore</button>
+                <button class="btn btn-outline" onclick="navigate('myListings')" id="myListingsBtn" style="display:none">📦 I Miei Annunci</button>
+                <button class="btn btn-outline" onclick="navigate('myOrders')" id="myOrdersBtn" style="display:none">📋 I Miei Ordini</button>
             </div>
             <div class="marketplace-filters" id="marketplaceFilters"></div>
             <div class="marketplace-grid" id="marketplaceGrid"></div>
+            <div class="pagination" id="marketplacePagination"></div>
+        </div>
+
+        <!-- Listing Detail -->
+        <div id="pageListingDetail" style="display:none">
+            <div class="listing-detail" id="listingDetail"></div>
+        </div>
+
+        <!-- Vendors List -->
+        <div id="pageVendors" style="display:none">
+            <h2>🏪 Venditori Verificati</h2>
+            <p class="page-subtitle">Per diventare venditore: sottoscrizione una tantum di 50€ in crypto. Contatta admin su Telegram: <strong>@OpCrime1312</strong> / <strong>@JollyFraud</strong></p>
+            <div class="vendors-grid" id="vendorsGrid"></div>
+        </div>
+
+        <!-- Vendor Profile -->
+        <div id="pageVendorProfile" style="display:none">
+            <div class="vendor-profile" id="vendorProfile"></div>
+        </div>
+
+        <!-- My Listings (vendor) -->
+        <div id="pageMyListings" style="display:none">
+            <div class="page-header-row">
+                <h2>📦 I Miei Annunci</h2>
+                <button class="btn btn-primary" onclick="showModal('newListing')">+ Nuovo Annuncio</button>
+            </div>
+            <div class="my-listings-grid" id="myListingsGrid"></div>
+        </div>
+
+        <!-- My Orders -->
+        <div id="pageMyOrders" style="display:none">
+            <h2>📋 I Miei Ordini</h2>
+            <div class="orders-tabs">
+                <button class="active" onclick="loadMyOrders('buying');setOrderTab(this)">🛒 Acquisti</button>
+                <button onclick="loadMyOrders('selling');setOrderTab(this)">💰 Vendite</button>
+            </div>
+            <div class="orders-list" id="ordersList"></div>
+        </div>
+
+        <!-- Order Detail -->
+        <div id="pageOrderDetail" style="display:none">
+            <div class="order-detail" id="orderDetail"></div>
         </div>
 
         <!-- Leaderboard -->
@@ -285,16 +338,61 @@
                 <form onsubmit="createListing(event)">
                     <input type="text" id="listingTitle" placeholder="Titolo" required minlength="3">
                     <textarea id="listingDesc" placeholder="Descrizione dettagliata..." rows="5" required></textarea>
-                    <input type="number" id="listingPrice" placeholder="Prezzo (crediti)" min="0" required>
-                    <select id="listingType" required>
-                        <option value="Selling">Vendita</option>
-                        <option value="Buying">Acquisto</option>
-                        <option value="Trading">Scambio</option>
-                    </select>
+                    <div class="form-row">
+                        <input type="number" id="listingPrice" placeholder="Prezzo" min="0.0001" step="0.0001" required>
+                        <select id="listingCurrency" required>
+                            <option value="BTC">BTC</option>
+                            <option value="ETH">ETH</option>
+                            <option value="USDT" selected>USDT</option>
+                            <option value="LTC">LTC</option>
+                            <option value="XMR">XMR</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <select id="listingType" required>
+                            <option value="Digital">🖥️ Digitale</option>
+                            <option value="Physical">📦 Fisico</option>
+                            <option value="Service">⚙️ Servizio</option>
+                        </select>
+                        <select id="listingDelivery" required>
+                            <option value="Instant">⚡ Consegna Istantanea</option>
+                            <option value="Manual">🤝 Consegna Manuale</option>
+                            <option value="Shipping">🚚 Spedizione</option>
+                        </select>
+                    </div>
                     <select id="listingCategory" required></select>
+                    <input type="number" id="listingStock" placeholder="Quantità disponibile" min="1" value="1">
+                    <input type="url" id="listingImage" placeholder="URL immagine (opzionale)">
+                    <textarea id="listingDigitalContent" placeholder="Contenuto digitale (auto-consegnato all'acquirente dopo pagamento)" rows="3" style="display:none"></textarea>
+                    <input type="text" id="listingShippingInfo" placeholder="Info spedizione (tempi, metodi...)" style="display:none">
                     <div class="modal-error" id="listingError"></div>
-                    <button type="submit" class="btn btn-primary btn-full">Pubblica</button>
+                    <button type="submit" class="btn btn-primary btn-full">Pubblica Annuncio</button>
                 </form>
+            </div>
+
+            <div id="modalVendorApply" style="display:none">
+                <h2>🏪 Diventa Venditore</h2>
+                <div class="vendor-apply-info">
+                    <p>Per diventare venditore verificato su CrimeCode Market è richiesta una sottoscrizione una tantum di <strong>50€ in crypto</strong>.</p>
+                    <p>Contatta un admin su Telegram per il pagamento:</p>
+                    <div class="telegram-contacts">
+                        <a href="https://t.me/OpCrime1312" target="_blank" rel="noopener" class="btn btn-accent">📱 @OpCrime1312</a>
+                        <a href="https://t.me/JollyFraud" target="_blank" rel="noopener" class="btn btn-accent">📱 @JollyFraud</a>
+                    </div>
+                    <p class="modal-sub">Dopo il pagamento, compila il form e la tua richiesta verrà approvata dallo staff.</p>
+                </div>
+                <form onsubmit="submitVendorApplication(event)">
+                    <input type="text" id="vendorTelegram" placeholder="Il tuo username Telegram (senza @)" required>
+                    <textarea id="vendorMotivation" placeholder="Perché vuoi vendere su CrimeCode?" rows="3" required></textarea>
+                    <input type="text" id="vendorSpecialization" placeholder="Cosa vendi? (es: accounts, tools, guides...)">
+                    <div class="modal-error" id="vendorError"></div>
+                    <button type="submit" class="btn btn-primary btn-full">Invia Richiesta</button>
+                </form>
+            </div>
+
+            <div id="modalOrderCreate" style="display:none">
+                <h2>🛒 Conferma Ordine</h2>
+                <div id="orderCreateContent"></div>
             </div>
 
             <div id="modalReputation" style="display:none">

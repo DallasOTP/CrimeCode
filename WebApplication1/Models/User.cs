@@ -19,6 +19,9 @@ public class User
     public string? BanReason { get; set; }
     public long? TelegramId { get; set; }
     public string Status { get; set; } = "online"; // online, away, busy, offline
+    public bool IsVendor { get; set; } = false;
+    public DateTime? VendorApprovedAt { get; set; }
+    public string? VendorBio { get; set; }
 
     public ICollection<ForumThread> Threads { get; set; } = [];
     public ICollection<Post> Posts { get; set; } = [];
@@ -37,4 +40,6 @@ public class User
     public ICollection<PostAttachment> Attachments { get; set; } = [];
     public ICollection<ChatMessage> SentChats { get; set; } = [];
     public ICollection<ChatMessage> ReceivedChats { get; set; } = [];
+    public ICollection<MarketplaceOrder> BuyerOrders { get; set; } = [];
+    public ICollection<MarketplaceOrder> SellerOrders { get; set; } = [];
 }

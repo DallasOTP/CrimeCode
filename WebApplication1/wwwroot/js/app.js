@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAuthUI();
     loadShoutbox();
     loadForumStats();
-    loadHome();
+    navigate('marketplace');
 });
 
 // === Telegram Mini App ===
@@ -144,6 +144,30 @@ function navigate(page, params = {}) {
             document.getElementById('pageMarketplace').style.display = '';
             loadMarketplace();
             break;
+        case 'listingDetail':
+            document.getElementById('pageListingDetail').style.display = '';
+            loadListingDetail(params.id);
+            break;
+        case 'vendors':
+            document.getElementById('pageVendors').style.display = '';
+            loadVendors();
+            break;
+        case 'vendorProfile':
+            document.getElementById('pageVendorProfile').style.display = '';
+            loadVendorProfile(params.id);
+            break;
+        case 'myListings':
+            document.getElementById('pageMyListings').style.display = '';
+            loadMyListings();
+            break;
+        case 'myOrders':
+            document.getElementById('pageMyOrders').style.display = '';
+            loadMyOrders('buying');
+            break;
+        case 'orderDetail':
+            document.getElementById('pageOrderDetail').style.display = '';
+            loadOrderDetail(params.id);
+            break;
         case 'leaderboard':
             document.getElementById('pageLeaderboard').style.display = '';
             loadLeaderboard('reputation');
@@ -192,9 +216,21 @@ function updateAuthUI() {
         // Show shoutbox input  
         const sbInput = document.getElementById('shoutboxInput');
         if (sbInput) sbInput.style.display = 'flex';
-        // Show new listing btn
+        // Show marketplace buttons based on vendor status
         const nlb = document.getElementById('newListingBtn');
-        if (nlb) nlb.style.display = '';
+        const vendorApplyBtn = document.getElementById('vendorApplyBtn');
+        const myListingsBtn = document.getElementById('myListingsBtn');
+        const myOrdersBtn = document.getElementById('myOrdersBtn');
+        const vendorPanelLink = document.getElementById('vendorPanelLink');
+        if (myOrdersBtn) myOrdersBtn.style.display = '';
+        
+        // Check vendor status
+        checkVendorStatus().then(isVendor => {
+            if (nlb) nlb.style.display = isVendor ? '' : 'none';
+            if (vendorApplyBtn) vendorApplyBtn.style.display = isVendor ? 'none' : '';
+            if (myListingsBtn) myListingsBtn.style.display = isVendor ? '' : 'none';
+            if (vendorPanelLink) vendorPanelLink.style.display = isVendor ? '' : 'none';
+        });
         updateChatVisibility();
     } else {
         nav.style.display = 'flex';
@@ -203,6 +239,12 @@ function updateAuthUI() {
         if (sbInput) sbInput.style.display = 'none';
         const nlb = document.getElementById('newListingBtn');
         if (nlb) nlb.style.display = 'none';
+        const vendorApplyBtn = document.getElementById('vendorApplyBtn');
+        if (vendorApplyBtn) vendorApplyBtn.style.display = 'none';
+        const myListingsBtn = document.getElementById('myListingsBtn');
+        if (myListingsBtn) myListingsBtn.style.display = 'none';
+        const myOrdersBtn = document.getElementById('myOrdersBtn');
+        if (myOrdersBtn) myOrdersBtn.style.display = 'none';
         updateChatVisibility();
     }
 }
@@ -348,7 +390,8 @@ function showModal(type, params = {}) {
     const map = {
         login: 'modalLogin', register: 'modalRegister', newThread: 'modalNewThread',
         sendMessage: 'modalSendMessage', avatar: 'modalAvatar',
-        newListing: 'modalNewListing', reputation: 'modalReputation'
+        newListing: 'modalNewListing', reputation: 'modalReputation',
+        vendorApply: 'modalVendorApply', orderCreate: 'modalOrderCreate'
     };
     const el = document.getElementById(map[type]);
     if (el) el.style.display = '';
@@ -1101,40 +1144,201 @@ async function submitReputation(e) {
 }
 
 // === Marketplace ===
-async function loadMarketplace(type = null) {
+let marketType = null;
+let marketCategory = null;
+let marketSearch = '';
+let marketPage = 1;
+
+async function checkVendorStatus() {
+    if (!currentUser) return false;
+    try {
+        const res = await api('/vendor/status');
+        currentUser.isVendor = res.isVendor;
+        return res.isVendor;
+    } catch { return false; }
+}
+
+async function loadMarketplace() {
     const grid = document.getElementById('marketplaceGrid');
     grid.innerHTML = '<div class="loading">Caricamento</div>';
     try {
-        const params = new URLSearchParams();
-        if (type) params.set('type', type);
-        const listings = await api(`/marketplace?${params}`);
-        
+        // Load stats
+        const stats = await api('/marketplace/stats');
+        const statsEl = document.getElementById('marketStats');
+        if (statsEl) statsEl.innerHTML = `
+            <div class="market-stat"><span class="market-stat-num">${stats.totalListings}</span><span>Annunci</span></div>
+            <div class="market-stat"><span class="market-stat-num">${stats.totalVendors}</span><span>Venditori</span></div>
+            <div class="market-stat"><span class="market-stat-num">${stats.totalSold}</span><span>Venduti</span></div>
+            <div class="market-stat"><span class="market-stat-num">${stats.totalOrders}</span><span>Ordini</span></div>`;
+
         // Filters
+        const params = new URLSearchParams();
+        if (marketType) params.set('type', marketType);
+        if (marketCategory) params.set('categoryId', marketCategory);
+        if (marketSearch) params.set('search', marketSearch);
+        params.set('page', marketPage);
+
+        const data = await api(`/marketplace?${params}`);
+        
         const filtersContainer = document.getElementById('marketplaceFilters');
         filtersContainer.innerHTML = `
-            <button class="filter-btn ${!type ? 'active' : ''}" onclick="loadMarketplace()">Tutti</button>
-            <button class="filter-btn ${type==='Selling' ? 'active' : ''}" onclick="loadMarketplace('Selling')">🏷️ Vendita</button>
-            <button class="filter-btn ${type==='Buying' ? 'active' : ''}" onclick="loadMarketplace('Buying')">🛒 Acquisto</button>
-            <button class="filter-btn ${type==='Trading' ? 'active' : ''}" onclick="loadMarketplace('Trading')">🔄 Scambio</button>`;
+            <div class="market-filter-row">
+                <button class="filter-btn ${!marketType ? 'active' : ''}" onclick="marketType=null;marketPage=1;loadMarketplace()">Tutti</button>
+                <button class="filter-btn ${marketType==='Digital' ? 'active' : ''}" onclick="marketType='Digital';marketPage=1;loadMarketplace()">🖥️ Digitale</button>
+                <button class="filter-btn ${marketType==='Physical' ? 'active' : ''}" onclick="marketType='Physical';marketPage=1;loadMarketplace()">📦 Fisico</button>
+                <button class="filter-btn ${marketType==='Service' ? 'active' : ''}" onclick="marketType='Service';marketPage=1;loadMarketplace()">⚙️ Servizio</button>
+            </div>
+            <div class="market-search-row">
+                <input type="text" id="marketSearchInput" placeholder="Cerca annunci..." value="${escapeHtml(marketSearch)}" onkeydown="if(event.key==='Enter'){marketSearch=this.value;marketPage=1;loadMarketplace()}">
+                <button class="btn btn-sm btn-primary" onclick="marketSearch=document.getElementById('marketSearchInput').value;marketPage=1;loadMarketplace()">🔍</button>
+            </div>`;
 
+        const listings = data.listings || data;
         if (!listings || listings.length === 0) {
-            grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🛒</div><p>Nessun annuncio</p></div>';
+            grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🛒</div><p>Nessun annuncio trovato</p></div>';
             return;
         }
-        grid.innerHTML = listings.map(l => `<div class="marketplace-card">
+
+        grid.innerHTML = listings.map(l => `<div class="marketplace-card" onclick="navigate('listingDetail',{id:${l.id}})">
+            ${l.imageUrl ? `<div class="marketplace-card-img"><img src="${escapeHtml(l.imageUrl)}" alt=""></div>` : ''}
             <div class="marketplace-card-header">
                 <span class="marketplace-card-title">${escapeHtml(l.title)}</span>
-                <span class="marketplace-card-price">💰 ${l.price}</span>
+                <span class="marketplace-card-price">${l.priceCrypto} ${escapeHtml(l.currency)}</span>
             </div>
-            <span class="marketplace-card-type ${l.type.toLowerCase()}">${escapeHtml(l.type)}</span>
-            <div class="marketplace-card-desc">${escapeHtml(l.description)}</div>
+            <div class="marketplace-card-tags">
+                <span class="marketplace-card-type ${l.type.toLowerCase()}">${l.type === 'Digital' ? '🖥️' : l.type === 'Physical' ? '📦' : '⚙️'} ${escapeHtml(l.type)}</span>
+                <span class="marketplace-card-delivery">${l.deliveryType === 'Instant' ? '⚡ Istantaneo' : l.deliveryType === 'Manual' ? '🤝 Manuale' : '🚚 Spedizione'}</span>
+            </div>
+            <div class="marketplace-card-desc">${escapeHtml(l.description).substring(0, 120)}${l.description.length > 120 ? '...' : ''}</div>
             <div class="marketplace-card-footer">
-                <span class="marketplace-card-seller" onclick="navigate('profile',{id:${l.sellerId}})">${escapeHtml(l.sellerName)}</span>
-                <span>${escapeHtml(l.categoryName)} · ${timeAgo(l.createdAt)}</span>
+                <span class="marketplace-card-seller" onclick="event.stopPropagation();navigate('vendorProfile',{id:${l.sellerId}})">
+                    ${l.isVendor ? '✅' : ''} ${escapeHtml(l.sellerName)}
+                </span>
+                <span class="marketplace-card-stock">${l.stock > 0 ? `📦 ${l.stock} disp.` : '❌ Esaurito'}</span>
             </div>
         </div>`).join('');
+
+        // Pagination
+        const pag = document.getElementById('marketplacePagination');
+        const totalPages = Math.ceil((data.total || listings.length) / 20);
+        if (totalPages > 1) {
+            let html = '';
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<button class="page-btn ${i === marketPage ? 'active' : ''}" onclick="marketPage=${i};loadMarketplace()">${i}</button>`;
+            }
+            pag.innerHTML = html;
+        } else {
+            pag.innerHTML = '';
+        }
     } catch {
-        grid.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore</p></div>';
+        grid.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore caricamento marketplace</p></div>';
+    }
+}
+
+async function loadListingDetail(id) {
+    const container = document.getElementById('listingDetail');
+    container.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const l = await api(`/marketplace/${id}`);
+        container.innerHTML = `
+            <button class="btn btn-outline btn-sm" onclick="navigate('marketplace')" style="margin-bottom:1rem">← Torna al Market</button>
+            <div class="listing-detail-card">
+                ${l.imageUrl ? `<div class="listing-detail-img"><img src="${escapeHtml(l.imageUrl)}" alt=""></div>` : ''}
+                <div class="listing-detail-body">
+                    <h2>${escapeHtml(l.title)}</h2>
+                    <div class="listing-detail-meta">
+                        <span class="listing-price-big">${l.priceCrypto} ${escapeHtml(l.currency)}</span>
+                        <span class="marketplace-card-type ${l.type.toLowerCase()}">${l.type === 'Digital' ? '🖥️' : l.type === 'Physical' ? '📦' : '⚙️'} ${escapeHtml(l.type)}</span>
+                        <span class="marketplace-card-delivery">${l.deliveryType === 'Instant' ? '⚡ Istantaneo' : l.deliveryType === 'Manual' ? '🤝 Manuale' : '🚚 Spedizione'}</span>
+                    </div>
+                    <div class="listing-detail-desc">${formatContent(l.description)}</div>
+                    ${l.shippingInfo ? `<div class="listing-ship-info">🚚 <strong>Spedizione:</strong> ${escapeHtml(l.shippingInfo)}</div>` : ''}
+                    <div class="listing-detail-stats">
+                        <span>📦 Stock: ${l.stock}</span>
+                        <span>🛒 Venduti: ${l.soldCount}</span>
+                        <span>📅 ${timeAgo(l.createdAt)}</span>
+                    </div>
+                    <div class="listing-seller-box" onclick="navigate('vendorProfile',{id:${l.sellerId}})">
+                        <div class="listing-seller-avatar">${l.sellerAvatarUrl ? `<img src="${escapeHtml(l.sellerAvatarUrl)}" alt="">` : l.sellerName.charAt(0).toUpperCase()}</div>
+                        <div class="listing-seller-info">
+                            <strong>${l.isVendor ? '✅' : ''} ${escapeHtml(l.sellerName)}</strong>
+                            <span>⭐ ${l.sellerReputation} rep · ${l.sellerSalesCount} vendite</span>
+                            ${l.vendorBio ? `<span class="listing-seller-bio">${escapeHtml(l.vendorBio)}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="listing-detail-actions">
+                        ${currentUser && currentUser.userId !== l.sellerId && l.stock > 0 && l.status === 'Active' ? `
+                            <button class="btn btn-primary btn-lg" onclick="showOrderModal(${l.id}, '${escapeHtml(l.title)}', ${l.priceCrypto}, '${escapeHtml(l.currency)}', '${l.deliveryType}', ${l.stock})">🛒 Acquista con Escrow</button>
+                        ` : ''}
+                        ${currentUser && currentUser.userId !== l.sellerId ? `
+                            <button class="btn btn-outline" onclick="navigate('messages',{userId:${l.sellerId}})">✉️ Contatta Venditore</button>
+                        ` : ''}
+                        ${l.stock <= 0 ? '<span class="sold-out-badge">❌ ESAURITO</span>' : ''}
+                    </div>
+                </div>
+            </div>`;
+    } catch {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Annuncio non trovato</p></div>';
+    }
+}
+
+function showOrderModal(listingId, title, price, currency, deliveryType, maxStock) {
+    showModal('orderCreate');
+    const content = document.getElementById('orderCreateContent');
+    content.innerHTML = `
+        <div class="order-summary">
+            <h3>${escapeHtml(title)}</h3>
+            <p class="order-price">${price} ${escapeHtml(currency)}</p>
+            <form onsubmit="createOrder(event, ${listingId})">
+                <div class="form-row">
+                    <label>Quantità</label>
+                    <input type="number" id="orderQuantity" min="1" max="${maxStock}" value="1" onchange="updateOrderTotal(${price}, '${escapeHtml(currency)}')">
+                </div>
+                ${deliveryType === 'Shipping' ? `
+                    <div class="form-group">
+                        <label>Indirizzo di spedizione</label>
+                        <textarea id="orderShippingAddress" placeholder="Inserisci l'indirizzo completo..." rows="3" required></textarea>
+                    </div>` : ''}
+                <div class="order-total">
+                    <span>Totale:</span>
+                    <strong id="orderTotalPrice">${price} ${escapeHtml(currency)}</strong>
+                </div>
+                <div class="escrow-info">
+                    <p>🔒 <strong>Pagamento tramite Escrow</strong></p>
+                    <p>I fondi verranno trattenuti in escrow fino alla consegna e conferma.</p>
+                    ${deliveryType === 'Instant' ? '<p>⚡ Il contenuto verrà consegnato automaticamente dopo il pagamento.</p>' : ''}
+                </div>
+                <div class="modal-error" id="orderError"></div>
+                <button type="submit" class="btn btn-primary btn-full">Procedi all'acquisto</button>
+            </form>
+        </div>`;
+}
+
+function updateOrderTotal(price, currency) {
+    const qty = parseInt(document.getElementById('orderQuantity').value) || 1;
+    document.getElementById('orderTotalPrice').textContent = `${(price * qty).toFixed(4)} ${currency}`;
+}
+
+async function createOrder(e, listingId) {
+    e.preventDefault();
+    const errEl = document.getElementById('orderError');
+    errEl.textContent = '';
+    try {
+        const qty = parseInt(document.getElementById('orderQuantity').value) || 1;
+        const shippingEl = document.getElementById('orderShippingAddress');
+        const res = await api('/orders', {
+            method: 'POST',
+            body: JSON.stringify({
+                listingId,
+                quantity: qty,
+                shippingAddress: shippingEl ? shippingEl.value.trim() : null
+            })
+        });
+        closeModal();
+        navigate('orderDetail', { id: res.orderId });
+        showToast('Ordine creato! Procedi con il pagamento escrow.', 'success');
+    } catch (err) {
+        errEl.textContent = err.data?.error || 'Errore creazione ordine';
     }
 }
 
@@ -1143,21 +1347,336 @@ async function createListing(e) {
     const errEl = document.getElementById('listingError');
     errEl.textContent = '';
     try {
-        await api('/marketplace', {
-            method: 'POST',
-            body: JSON.stringify({
-                title: document.getElementById('listingTitle').value.trim(),
-                description: document.getElementById('listingDesc').value.trim(),
-                price: parseInt(document.getElementById('listingPrice').value),
-                type: document.getElementById('listingType').value,
-                categoryId: parseInt(document.getElementById('listingCategory').value)
-            })
-        });
+        const deliveryType = document.getElementById('listingDelivery').value;
+        const body = {
+            title: document.getElementById('listingTitle').value.trim(),
+            description: document.getElementById('listingDesc').value.trim(),
+            priceCrypto: parseFloat(document.getElementById('listingPrice').value),
+            currency: document.getElementById('listingCurrency').value,
+            type: document.getElementById('listingType').value,
+            deliveryType: deliveryType,
+            categoryId: parseInt(document.getElementById('listingCategory').value),
+            stock: parseInt(document.getElementById('listingStock').value) || 1,
+            imageUrl: document.getElementById('listingImage').value.trim() || null,
+            digitalContent: deliveryType === 'Instant' ? document.getElementById('listingDigitalContent').value.trim() : null,
+            shippingInfo: deliveryType === 'Shipping' ? document.getElementById('listingShippingInfo').value.trim() : null
+        };
+        const res = await api('/marketplace', { method: 'POST', body: JSON.stringify(body) });
         closeModal();
+        if (res.status === 'PendingApproval') {
+            showToast('Annuncio inviato! In attesa di approvazione dallo staff.', 'info');
+        } else {
+            showToast('Annuncio pubblicato!', 'success');
+        }
         loadMarketplace();
     } catch (err) {
         errEl.textContent = err.data?.error || 'Errore';
     }
+}
+
+// Toggle conditional fields in listing form
+document.addEventListener('change', (e) => {
+    if (e.target.id === 'listingDelivery') {
+        const dc = document.getElementById('listingDigitalContent');
+        const si = document.getElementById('listingShippingInfo');
+        dc.style.display = e.target.value === 'Instant' ? '' : 'none';
+        si.style.display = e.target.value === 'Shipping' ? '' : 'none';
+    }
+});
+
+// === Vendors ===
+async function loadVendors() {
+    const grid = document.getElementById('vendorsGrid');
+    grid.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const vendors = await api('/vendors');
+        if (!vendors || vendors.length === 0) {
+            grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🏪</div><p>Nessun venditore ancora</p></div>';
+            return;
+        }
+        grid.innerHTML = vendors.map(v => `<div class="vendor-card" onclick="navigate('vendorProfile',{id:${v.id}})">
+            <div class="vendor-card-avatar">${v.avatarUrl ? `<img src="${escapeHtml(v.avatarUrl)}" alt="">` : v.username.charAt(0).toUpperCase()}</div>
+            <div class="vendor-card-info">
+                <strong>✅ ${escapeHtml(v.username)}</strong>
+                <span>⭐ ${v.reputationScore} rep · ${v.totalSales} vendite · ${v.activeListings} annunci</span>
+                ${v.vendorBio ? `<span class="vendor-card-bio">${escapeHtml(v.vendorBio)}</span>` : ''}
+            </div>
+        </div>`).join('');
+    } catch {
+        grid.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore</p></div>';
+    }
+}
+
+async function loadVendorProfile(id) {
+    const container = document.getElementById('vendorProfile');
+    container.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const data = await api(`/marketplace/vendor/${id}`);
+        const v = data.vendor;
+        container.innerHTML = `
+            <button class="btn btn-outline btn-sm" onclick="navigate('vendors')" style="margin-bottom:1rem">← Venditori</button>
+            <div class="vendor-profile-header">
+                <div class="vendor-profile-avatar">${v.avatarUrl ? `<img src="${escapeHtml(v.avatarUrl)}" alt="">` : v.username.charAt(0).toUpperCase()}</div>
+                <div class="vendor-profile-info">
+                    <h2>✅ ${escapeHtml(v.username)}</h2>
+                    ${v.vendorBio ? `<p>${escapeHtml(v.vendorBio)}</p>` : ''}
+                    <div class="vendor-profile-stats">
+                        <span>⭐ ${v.reputationScore} Reputazione</span>
+                        <span>🛒 ${v.totalSales} Vendite</span>
+                        <span>📦 ${v.activeListings} Annunci attivi</span>
+                        ${v.vendorSince ? `<span>📅 Venditore dal ${new Date(v.vendorSince).toLocaleDateString('it-IT')}</span>` : ''}
+                    </div>
+                    <button class="btn btn-outline btn-sm" onclick="navigate('messages',{userId:${v.id}})">✉️ Contatta</button>
+                </div>
+            </div>
+            <h3 style="margin-top:1.5rem">Annunci di ${escapeHtml(v.username)}</h3>
+            <div class="marketplace-grid">${data.listings.length === 0 ? '<p>Nessun annuncio attivo</p>' :
+                data.listings.map(l => `<div class="marketplace-card" onclick="navigate('listingDetail',{id:${l.id}})">
+                    ${l.imageUrl ? `<div class="marketplace-card-img"><img src="${escapeHtml(l.imageUrl)}" alt=""></div>` : ''}
+                    <div class="marketplace-card-header">
+                        <span class="marketplace-card-title">${escapeHtml(l.title)}</span>
+                        <span class="marketplace-card-price">${l.priceCrypto} ${escapeHtml(l.currency)}</span>
+                    </div>
+                    <div class="marketplace-card-tags">
+                        <span class="marketplace-card-type ${l.type.toLowerCase()}">${escapeHtml(l.type)}</span>
+                    </div>
+                    <div class="marketplace-card-desc">${escapeHtml(l.description).substring(0, 100)}</div>
+                </div>`).join('')}
+            </div>`;
+    } catch {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore</p></div>';
+    }
+}
+
+// === Vendor Application ===
+async function submitVendorApplication(e) {
+    e.preventDefault();
+    const errEl = document.getElementById('vendorError');
+    errEl.textContent = '';
+    try {
+        await api('/vendor/apply', {
+            method: 'POST',
+            body: JSON.stringify({
+                telegramUsername: document.getElementById('vendorTelegram').value.trim(),
+                motivation: document.getElementById('vendorMotivation').value.trim(),
+                specialization: document.getElementById('vendorSpecialization').value.trim() || null
+            })
+        });
+        closeModal();
+        showToast('Richiesta venditore inviata! Verrai contattato dallo staff.', 'success');
+    } catch (err) {
+        errEl.textContent = err.data?.error || 'Errore';
+    }
+}
+
+// === My Listings ===
+async function loadMyListings() {
+    const grid = document.getElementById('myListingsGrid');
+    grid.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const listings = await api('/marketplace/my');
+        if (!listings || listings.length === 0) {
+            grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📦</div><p>Nessun annuncio pubblicato</p></div>';
+            return;
+        }
+        grid.innerHTML = listings.map(l => `<div class="marketplace-card my-listing-card">
+            <div class="my-listing-status status-${l.status.toLowerCase()}">${getStatusLabel(l.status)}</div>
+            ${l.imageUrl ? `<div class="marketplace-card-img"><img src="${escapeHtml(l.imageUrl)}" alt=""></div>` : ''}
+            <div class="marketplace-card-header">
+                <span class="marketplace-card-title">${escapeHtml(l.title)}</span>
+                <span class="marketplace-card-price">${l.priceCrypto} ${escapeHtml(l.currency)}</span>
+            </div>
+            <div class="marketplace-card-tags">
+                <span class="marketplace-card-type ${l.type.toLowerCase()}">${escapeHtml(l.type)}</span>
+                <span>📦 ${l.stock} · 🛒 ${l.soldCount} venduti</span>
+            </div>
+            ${l.rejectionReason ? `<div class="rejection-reason">❌ Motivo rifiuto: ${escapeHtml(l.rejectionReason)}</div>` : ''}
+            <div class="my-listing-actions">
+                <button class="btn btn-sm btn-outline" onclick="navigate('listingDetail',{id:${l.id}})">👁️ Vedi</button>
+                ${l.status === 'Active' ? `<button class="btn btn-sm btn-danger" onclick="updateListingStatus(${l.id},'Closed')">Chiudi</button>` : ''}
+                ${l.status === 'Closed' || l.status === 'Rejected' ? `<button class="btn btn-sm btn-primary" onclick="updateListingStatus(${l.id},'Active')">Riattiva</button>` : ''}
+            </div>
+        </div>`).join('');
+    } catch {
+        grid.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore</p></div>';
+    }
+}
+
+function getStatusLabel(status) {
+    const labels = {
+        'PendingApproval': '⏳ In attesa',
+        'Active': '✅ Attivo',
+        'Sold': '🛒 Venduto',
+        'Closed': '🔒 Chiuso',
+        'Rejected': '❌ Rifiutato'
+    };
+    return labels[status] || status;
+}
+
+async function updateListingStatus(id, status) {
+    try {
+        await api(`/marketplace/${id}/status?status=${status}`, { method: 'PUT' });
+        loadMyListings();
+        showToast('Stato aggiornato', 'success');
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+// === Orders ===
+function setOrderTab(btn) {
+    document.querySelectorAll('.orders-tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+}
+
+async function loadMyOrders(type = 'buying') {
+    const list = document.getElementById('ordersList');
+    list.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const orders = await api(`/orders/${type}`);
+        if (!orders || orders.length === 0) {
+            list.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><p>Nessun ordine</p></div>';
+            return;
+        }
+        list.innerHTML = orders.map(o => `<div class="order-card" onclick="navigate('orderDetail',{id:${o.id}})">
+            <div class="order-card-left">
+                ${o.listingImageUrl ? `<img src="${escapeHtml(o.listingImageUrl)}" alt="" class="order-thumb">` : '<div class="order-thumb-placeholder">🛒</div>'}
+                <div class="order-card-info">
+                    <strong>${escapeHtml(o.listingTitle)}</strong>
+                    <span>${o.amount} ${escapeHtml(o.currency)} · x${o.quantity}</span>
+                    <span>${type === 'buying' ? `Venditore: ${escapeHtml(o.sellerName)}` : `Acquirente: ${escapeHtml(o.buyerName)}`}</span>
+                </div>
+            </div>
+            <div class="order-card-right">
+                <span class="order-status-badge status-${o.status.toLowerCase()}">${getOrderStatusLabel(o.status)}</span>
+                <span class="order-escrow-badge escrow-${o.escrowStatus.toLowerCase()}">${getEscrowLabel(o.escrowStatus)}</span>
+                <span class="order-date">${timeAgo(o.createdAt)}</span>
+            </div>
+        </div>`).join('');
+    } catch {
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore</p></div>';
+    }
+}
+
+function getOrderStatusLabel(s) {
+    const labels = { Created:'📝 Creato', EscrowFunded:'💰 Escrow', Processing:'⚙️ In lavorazione', Shipped:'🚚 Spedito', Delivered:'✅ Consegnato', Completed:'🏁 Completato', Disputed:'⚠️ Disputa', Cancelled:'❌ Annullato', Refunded:'💸 Rimborsato' };
+    return labels[s] || s;
+}
+
+function getEscrowLabel(s) {
+    const labels = { Pending:'⏳ In attesa', Funded:'💰 Finanziato', Released:'✅ Rilasciato', Refunded:'💸 Rimborsato', Disputed:'⚠️ Disputa' };
+    return labels[s] || s;
+}
+
+async function loadOrderDetail(id) {
+    const container = document.getElementById('orderDetail');
+    container.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const o = await api(`/orders/${id}`);
+        const isBuyer = currentUser && currentUser.userId === o.buyerId;
+        const isSeller = currentUser && currentUser.userId === o.sellerId;
+
+        container.innerHTML = `
+            <button class="btn btn-outline btn-sm" onclick="navigate('myOrders')" style="margin-bottom:1rem">← I Miei Ordini</button>
+            <div class="order-detail-card">
+                <div class="order-detail-header">
+                    <h2>Ordine #${o.id}</h2>
+                    <span class="order-status-badge status-${o.status.toLowerCase()}">${getOrderStatusLabel(o.status)}</span>
+                </div>
+                <div class="order-detail-grid">
+                    <div class="order-info-section">
+                        <h3>📦 Dettagli</h3>
+                        <p><strong>Prodotto:</strong> ${escapeHtml(o.listingTitle)}</p>
+                        <p><strong>Quantità:</strong> x${o.quantity}</p>
+                        <p><strong>Importo:</strong> ${o.amount} ${escapeHtml(o.currency)}</p>
+                        <p><strong>Consegna:</strong> ${o.deliveryType === 'Instant' ? '⚡ Istantaneo' : o.deliveryType === 'Manual' ? '🤝 Manuale' : '🚚 Spedizione'}</p>
+                        <p><strong>Data:</strong> ${new Date(o.createdAt).toLocaleString('it-IT')}</p>
+                    </div>
+                    <div class="order-info-section">
+                        <h3>🔒 Escrow</h3>
+                        <p><strong>Stato:</strong> <span class="escrow-${o.escrowStatus.toLowerCase()}">${getEscrowLabel(o.escrowStatus)}</span></p>
+                        ${o.escrowWalletAddress && o.escrowStatus === 'Pending' ? `
+                            <div class="escrow-pay-box">
+                                <p>Invia <strong>${o.amount} ${escapeHtml(o.currency)}</strong> a:</p>
+                                <code class="escrow-address">${escapeHtml(o.escrowWalletAddress)}</code>
+                                <p class="escrow-note">Dopo il pagamento, inserisci il TX ID per confermare</p>
+                            </div>` : ''}
+                    </div>
+                </div>
+                ${o.shippingAddress ? `<div class="order-info-section"><h3>🚚 Spedizione</h3><p>${escapeHtml(o.shippingAddress)}</p>${o.trackingNumber ? `<p><strong>Tracking:</strong> ${escapeHtml(o.trackingNumber)}</p>` : ''}</div>` : ''}
+                ${o.digitalDeliveryContent && isBuyer ? `<div class="order-info-section digital-content-box"><h3>📥 Contenuto Consegnato</h3><pre>${escapeHtml(o.digitalDeliveryContent)}</pre></div>` : ''}
+                ${o.disputeReason ? `<div class="order-info-section dispute-box"><h3>⚠️ Disputa</h3><p>${escapeHtml(o.disputeReason)}</p></div>` : ''}
+                <div class="order-detail-actions">
+                    ${isBuyer && o.escrowStatus === 'Pending' ? `
+                        <div class="fund-escrow-form">
+                            <input type="text" id="fundTxId" placeholder="Inserisci TX ID del pagamento">
+                            <button class="btn btn-primary" onclick="fundEscrow(${o.id})">💰 Conferma Pagamento</button>
+                        </div>` : ''}
+                    ${isBuyer && (o.status === 'Delivered' || o.status === 'Shipped') ? `<button class="btn btn-primary btn-lg" onclick="confirmOrder(${o.id})">✅ Conferma Ricezione (Rilascia Escrow)</button>` : ''}
+                    ${isBuyer && o.escrowStatus === 'Funded' && o.status !== 'Completed' ? `<button class="btn btn-danger" onclick="disputeOrder(${o.id})">⚠️ Apri Disputa</button>` : ''}
+                    ${isSeller && o.escrowStatus === 'Funded' && o.deliveryType === 'Shipping' && o.status === 'EscrowFunded' ? `
+                        <div class="ship-form">
+                            <input type="text" id="shipTracking" placeholder="Numero di tracking">
+                            <button class="btn btn-primary" onclick="shipOrder(${o.id})">🚚 Segna come Spedito</button>
+                        </div>` : ''}
+                    ${isSeller && o.escrowStatus === 'Funded' && o.deliveryType === 'Manual' && o.status === 'EscrowFunded' ? `
+                        <div class="deliver-form">
+                            <textarea id="deliverContent" placeholder="Contenuto da consegnare al compratore..." rows="3"></textarea>
+                            <button class="btn btn-primary" onclick="deliverOrder(${o.id})">📤 Consegna Contenuto</button>
+                        </div>` : ''}
+                    <button class="btn btn-outline" onclick="navigate('messages',{userId:${isBuyer ? o.sellerId : o.buyerId}})">✉️ ${isBuyer ? 'Contatta Venditore' : 'Contatta Acquirente'}</button>
+                </div>
+            </div>`;
+    } catch {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Ordine non trovato</p></div>';
+    }
+}
+
+async function fundEscrow(orderId) {
+    const txId = document.getElementById('fundTxId').value.trim();
+    if (!txId) return showToast('Inserisci il TX ID', 'error');
+    try {
+        await api(`/orders/${orderId}/fund`, { method: 'PUT', body: JSON.stringify({ buyerTxId: txId }) });
+        showToast('Pagamento confermato!', 'success');
+        loadOrderDetail(orderId);
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+async function confirmOrder(orderId) {
+    if (!confirm('Confermi di aver ricevuto il prodotto? L\'escrow verrà rilasciato al venditore.')) return;
+    try {
+        await api(`/orders/${orderId}/confirm`, { method: 'PUT' });
+        showToast('Ordine completato! Escrow rilasciato.', 'success');
+        loadOrderDetail(orderId);
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+async function disputeOrder(orderId) {
+    const reason = prompt('Motivo della disputa:');
+    if (!reason) return;
+    try {
+        await api(`/orders/${orderId}/dispute`, { method: 'PUT', body: JSON.stringify({ reason }) });
+        showToast('Disputa aperta. Un admin esaminerà il caso.', 'info');
+        loadOrderDetail(orderId);
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+async function shipOrder(orderId) {
+    const tracking = document.getElementById('shipTracking').value.trim();
+    if (!tracking) return showToast('Inserisci il tracking', 'error');
+    try {
+        await api(`/orders/${orderId}/ship`, { method: 'PUT', body: JSON.stringify({ trackingNumber: tracking }) });
+        showToast('Ordine segnato come spedito!', 'success');
+        loadOrderDetail(orderId);
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+async function deliverOrder(orderId) {
+    const content = document.getElementById('deliverContent').value.trim();
+    if (!content) return showToast('Inserisci il contenuto da consegnare', 'error');
+    try {
+        await api(`/orders/${orderId}/deliver?content=${encodeURIComponent(content)}`, { method: 'PUT' });
+        showToast('Contenuto consegnato!', 'success');
+        loadOrderDetail(orderId);
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
 }
 
 // === Leaderboard ===

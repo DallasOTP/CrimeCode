@@ -61,6 +61,8 @@ app.MapNotificationEndpoints();
 app.MapMessageEndpoints();
 app.MapReputationEndpoints();
 app.MapMarketplaceEndpoints();
+app.MapVendorEndpoints();
+app.MapOrderEndpoints();
 app.MapShoutboxEndpoints();
 app.MapLeaderboardEndpoints();
 app.MapReactionsEndpoints();
