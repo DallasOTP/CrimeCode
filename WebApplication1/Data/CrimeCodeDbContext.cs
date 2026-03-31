@@ -27,6 +27,7 @@ public class CrimeCodeDbContext : DbContext
     public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
     public DbSet<TicketReply> TicketReplies => Set<TicketReply>();
     public DbSet<AdminLog> AdminLogs => Set<AdminLog>();
+    public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -41,6 +42,11 @@ public class CrimeCodeDbContext : DbContext
             e.HasIndex(uf => new { uf.FollowerId, uf.FollowingId }).IsUnique();
             e.HasOne(uf => uf.Follower).WithMany(u => u.Following).HasForeignKey(uf => uf.FollowerId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(uf => uf.Following).WithMany(u => u.Followers).HasForeignKey(uf => uf.FollowingId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<UserBlock>(e =>
+        {
+            e.HasIndex(ub => new { ub.BlockerId, ub.BlockedId }).IsUnique();
         });
 
         modelBuilder.Entity<Notification>(e =>

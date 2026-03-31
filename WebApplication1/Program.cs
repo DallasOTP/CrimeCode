@@ -132,6 +132,20 @@ using (var scope = app.Services.CreateScope())
     {
         db.Database.EnsureCreated();
     }
+
+    // Ensure new tables exist (for incremental schema updates)
+    db.Database.ExecuteSqlRaw(@"
+        CREATE TABLE IF NOT EXISTS UserBlocks (
+            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+            CreatedAt TEXT NOT NULL DEFAULT (datetime('now')),
+            BlockerId INTEGER NOT NULL,
+            BlockedId INTEGER NOT NULL,
+            FOREIGN KEY (BlockerId) REFERENCES Users(Id),
+            FOREIGN KEY (BlockedId) REFERENCES Users(Id)
+        )");
+    db.Database.ExecuteSqlRaw(@"
+        CREATE UNIQUE INDEX IF NOT EXISTS IX_UserBlocks_BlockerId_BlockedId 
+        ON UserBlocks (BlockerId, BlockedId)");
 }
 
 // Healthcheck endpoint — responds immediately, before any middleware
@@ -185,6 +199,7 @@ app.MapVendorStatsEndpoints();
 app.MapTicketEndpoints();
 app.MapAnalyticsEndpoints();
 app.MapExportEndpoints();
+app.MapBlockEndpoints();
 
 // Fallback to index.html for SPA routing
 app.MapFallbackToFile("index.html");

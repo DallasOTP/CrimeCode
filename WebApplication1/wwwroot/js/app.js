@@ -71,6 +71,8 @@ function loadDashAccount() {
     if (el('dashEditWebsite')) el('dashEditWebsite').value = currentUser.website || '';
     if (el('dashEditLocation')) el('dashEditLocation').value = currentUser.location || '';
     if (el('dashEditJabber')) el('dashEditJabber').value = currentUser.jabber || '';
+    if (el('dashStatCredits')) el('dashStatCredits').textContent = currentUser.credits || 0;
+    if (el('dashStatRep')) el('dashStatRep').textContent = currentUser.reputationScore || 0;
     const avBig = el('dashAvatarBig');
     if (avBig) {
         if (currentUser.avatar) {
@@ -85,16 +87,15 @@ function loadDashAccount() {
 async function saveDashAccountInfo(e) {
     e.preventDefault();
     const msgEl = document.getElementById('dashAccountMsg');
+    if (!currentUser?.id) return showToast('Not logged in', 'error');
     const body = {
-        username: document.getElementById('dashEditUsername').value.trim(),
-        email: document.getElementById('dashEditEmail').value.trim(),
         bio: document.getElementById('dashEditBio').value.trim(),
         website: document.getElementById('dashEditWebsite').value.trim(),
         location: document.getElementById('dashEditLocation').value.trim(),
         jabber: document.getElementById('dashEditJabber').value.trim()
     };
     try {
-        await api('/auth/update-profile', { method: 'PUT', body: JSON.stringify(body) });
+        await api('/users/' + currentUser.id + '/profile', { method: 'PUT', body: JSON.stringify(body) });
         if (msgEl) { msgEl.textContent = 'Saved!'; msgEl.style.color = '#0f0'; }
         showToast('Profile updated!', 'success');
         await refreshMe();
@@ -114,15 +115,18 @@ async function loadDashWallet() {
     try {
         const wallets = await api('/wallet');
         dashWallets = {};
-        if (!wallets || !wallets.length) {
-            // Init default wallets
-            for (const c of ['BTC','ETH','USDT','LTC','XMR']) {
+        // Init any missing wallets silently
+        const existing = new Set((wallets || []).map(w => w.currency));
+        for (const c of ['BTC','ETH','USDT','LTC','XMR']) {
+            if (!existing.has(c)) {
                 try { await api('/wallet/init?currency=' + c, { method: 'POST' }); } catch {}
             }
+        }
+        if (!existing.size) {
             const w2 = await api('/wallet');
             (w2 || []).forEach(w => dashWallets[w.currency] = w);
         } else {
-            wallets.forEach(w => dashWallets[w.currency] = w);
+            (wallets || []).forEach(w => dashWallets[w.currency] = w);
         }
         renderDashWalletOverview(ov);
     } catch (err) {
@@ -238,7 +242,7 @@ async function loadDashOrders(type) {
     if (activeTab) activeTab.classList.add('active');
     list.innerHTML = '<div class="loading">Loading...</div>';
     try {
-        const orders = await api('/orders/my?type=' + type);
+        const orders = await api('/orders/' + type);
         if (!orders || !orders.length) {
             list.innerHTML = '<div class="dash-muted">No ' + type + ' orders</div>';
             return;
@@ -270,10 +274,10 @@ async function loadDashMessenger() {
             return;
         }
         el.innerHTML = convs.map(c =>
-            '<div class="dash-conv-item" onclick="navigate(\'messages\')">' +
-                '<div class="dash-conv-user">' + escapeHtml(c.otherUser || c.username || 'User') + '</div>' +
+            '<div class="dash-conv-item" onclick="navigate(\'messages\', {userId:' + c.userId + '})">' +
+                '<div class="dash-conv-user">' + escapeHtml(c.username || 'User') + '</div>' +
                 '<div class="dash-conv-preview">' + escapeHtml((c.lastMessage || '').substring(0, 80)) + '</div>' +
-                '<div class="dash-conv-date">' + new Date(c.updatedAt || c.createdAt).toLocaleDateString() + '</div>' +
+                '<div class="dash-conv-date">' + new Date(c.lastMessageAt).toLocaleDateString() + '</div>' +
             '</div>'
         ).join('');
     } catch {

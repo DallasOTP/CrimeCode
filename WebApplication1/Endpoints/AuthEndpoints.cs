@@ -109,6 +109,6 @@ public static class AuthEndpoints
                 user.Credits, user.ReputationScore, user.Status,
                 user.Followers.Count, user.Following.Count, false,
                 user.BannerUrl, user.Website, user.Location, user.Jabber, user.Birthday));
-        }).RequireAuthorization();
+        }).RequireAuthorization().RequireRateLimiting("api-read");
     }
 }
