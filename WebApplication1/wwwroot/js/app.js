@@ -517,8 +517,8 @@ function verifyCaptcha(formId) {
 
     // Block Geolocation API
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition = (s, e) => e?.({ code: 1, message: 'Blocked by CrimeCode Shield' });
-        navigator.geolocation.watchPosition = (s, e) => e?.({ code: 1, message: 'Blocked by CrimeCode Shield' });
+        navigator.geolocation.getCurrentPosition = (s, e) => e?.({ code: 1, message: 'Blocked by CrimeMarket Shield' });
+        navigator.geolocation.watchPosition = (s, e) => e?.({ code: 1, message: 'Blocked by CrimeMarket Shield' });
     }
 
     // Anti-clipboard sniffing — prevent external paste read
@@ -528,7 +528,7 @@ function verifyCaptcha(formId) {
         }
     });
 
-    console.log('%c🛡️ CrimeCode Offshore Shield Active', 'color: #00e5a0; font-size: 14px; font-weight: bold;');
+    console.log('%c🛡️ CrimeMarket Offshore Shield Active', 'color: #00e5a0; font-size: 14px; font-weight: bold;');
     console.log('%cAnti-DDoS • Security Headers • WebRTC Block • No-Track • Anti-Fingerprint', 'color: #6b7fa0; font-size: 11px;');
 })();
 
@@ -867,7 +867,7 @@ async function register(e) {
         localStorage.setItem('crimecode_user', JSON.stringify(data));
         refreshMe();
         closeModal();
-        showToast('Account creato! Benvenuto su CrimeCode', 'success');
+        showToast('Account creato! Benvenuto su CrimeMarket', 'success');
     } catch (err) {
         errEl.textContent = err.data?.error || 'Errore durante la registrazione. Riprova.';
     } finally {

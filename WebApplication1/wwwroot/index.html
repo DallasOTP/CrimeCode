@@ -46,7 +46,7 @@
                 </div>
                 <nav class="header-center">
                     <a href="#" onclick="navigate('marketplace')" class="nav-link" data-page="marketplace">HOME</a>
-                    <a href="#" onclick="navigate('myOrders')" class="nav-link" data-page="myOrders">MY ORDERS</a>
+                    <a href="#" onclick="navigate('dashboard'); showDashSection('orders'); return false;" class="nav-link" data-page="myOrders">MY ORDERS</a>
                     <a href="#" onclick="navigate('vendors')" class="nav-link" data-page="vendors">BECOME A VENDOR</a>
                 </nav>
                 <div class="header-right">
@@ -71,20 +71,20 @@
                             <span class="chevron">▼</span>
                         </button>
                         <div class="user-dropdown" id="userDropdown">
-                            <a href="#" onclick="navigate('profile',{id:currentUser?.userId})">👤 Profilo</a>
-                            <a href="#" onclick="navigate('messages')">✉️ Messaggi</a>
+                            <a href="#" onclick="navigate('dashboard'); showDashSection('account'); return false;">👤 Profilo</a>
+                            <a href="#" onclick="navigate('dashboard'); showDashSection('messenger'); return false;">✉️ Messaggi</a>
                             <a href="#" onclick="navigate('notifications')">🔔 Notifiche</a>
-                            <a href="#" onclick="navigate('myOrders')">📋 Ordini</a>
-                            <a href="#" onclick="navigate('wallet')">💰 Wallet</a>
+                            <a href="#" onclick="navigate('dashboard'); showDashSection('orders'); return false;">📋 Ordini</a>
+                            <a href="#" onclick="navigate('dashboard'); showDashSection('wallet-internal'); return false;">💰 Wallet</a>
                             <a href="#" onclick="navigate('wishlist')">❤️ Wishlist</a>
-                            <a href="#" onclick="navigate('tickets')">🎫 Supporto</a>
+                            <a href="#" onclick="navigate('dashboard'); showDashSection('tickets'); return false;">🎫 Supporto</a>
                             <a href="#" id="vendorPanelLink" style="display:none" onclick="navigate('myListings')">📦 Vendor Panel</a>
                             <a href="#" id="vendorVouchersLink" style="display:none" onclick="navigate('vouchers')">🎟️ Voucher</a>
                             <a href="#" id="vendorStatsLink" style="display:none" onclick="navigate('vendorStats')">📊 Statistiche</a>
                             <a href="#" onclick="navigate('settings2fa')">🔐 2FA</a>
                             <a href="#" id="adminLink" style="display:none" onclick="navigate('admin')">⚙️ Admin</a>
                             <div class="dropdown-divider"></div>
-                            <a href="#" onclick="logout()">🚪 Esci</a>
+                            <a href="#" onclick="logout(); return false;">🚪 Esci</a>
                         </div>
                     </div>
                 </div>
@@ -114,7 +114,7 @@
                         <a href="#" class="dash-link" data-section="tickets"><span class="dash-icon">&#x1F3AB;</span> Tickets</a>
                         <a href="#" class="dash-link" data-section="block"><span class="dash-icon">&#x26D4;</span> Block Users</a>
                         <a href="#" class="dash-link" data-section="desktop"><span class="dash-icon">&#x1F4BB;</span> Desktop App</a>
-                        <a href="#" class="dash-link dash-logout" onclick="logout()"><span class="dash-icon">&#x1F6AA;</span> Logout</a>
+                        <a href="#" class="dash-link dash-logout" onclick="logout(); return false;"><span class="dash-icon">&#x1F6AA;</span> Logout</a>
                     </nav>
                 </aside>
                 <section class="dashboard-main" id="dashboardMain">
@@ -259,7 +259,7 @@
                     </div>
 
                     <div class="dash-section" id="dashSection-desktop" style="display:none">
-                        <h2 class="dash-section-title">CrimeCode Dev (Desktop App)</h2>
+                        <h2 class="dash-section-title">CrimeMarket Dev (Desktop App)</h2>
                         <div class="dash-card">
                             <h3 class="dash-subtitle">Nativo e Più Veloce</h3>
                             <p style="color: #cad3f5; margin-bottom: 20px; line-height: 1.5;">
@@ -268,7 +268,7 @@
                                 senza i limiti del browser web.
                             </p>
                             <div style="text-align: center; margin: 30px 0;">
-                                <a href="/downloads/CrimeCode.exe" download class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; font-size: 1.1rem;">
+                                <a href="/downloads/CrimeMarket.exe" download class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; font-size: 1.1rem;">
                                     <span style="font-size: 1.4rem;">&#x2B07;</span>
                                     Download per Windows (.exe)
                                 </a>
@@ -363,7 +363,7 @@
                 <button class="btn btn-primary" onclick="showModal('newListing')" id="newListingBtn" style="display:none">+ Nuovo Annuncio</button>
                 <button class="btn btn-accent" onclick="showModal('vendorApply')" id="vendorApplyBtn" style="display:none">🏪 Diventa Venditore</button>
                 <button class="btn btn-outline" onclick="navigate('myListings')" id="myListingsBtn" style="display:none">📦 I Miei Annunci</button>
-                <button class="btn btn-outline" onclick="navigate('myOrders')" id="myOrdersBtn" style="display:none">📋 I Miei Ordini</button>
+                <button class="btn btn-outline" onclick="navigate('dashboard'); showDashSection('orders'); return false;" id="myOrdersBtn" style="display:none">📋 I Miei Ordini</button>
             </div>
             <div class="marketplace-filters" id="marketplaceFilters"></div>
             <div class="marketplace-grid" id="marketplaceGrid"></div>
@@ -490,7 +490,7 @@
                 <div class="auth-icon">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1"/></svg>
                 </div>
-                <h2>Accedi a CrimeCode</h2>
+                <h2>Accedi a CrimeMarket</h2>
                 <p class="auth-subtitle">Inserisci le tue credenziali per accedere</p>
                 <form onsubmit="login(event)">
                     <div class="input-group">
@@ -521,7 +521,7 @@
                 <div class="auth-icon">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
                 </div>
-                <h2>Unisciti a CrimeCode</h2>
+                <h2>Unisciti a CrimeMarket</h2>
                 <p class="auth-subtitle">Crea il tuo account per accedere al marketplace</p>
                 <form onsubmit="register(event)">
                     <div class="input-group">
@@ -612,7 +612,7 @@
             <div id="modalVendorApply" style="display:none">
                 <h2>🏪 Diventa Venditore</h2>
                 <div class="vendor-apply-info">
-                    <p>Per diventare venditore verificato su CrimeCode Market è richiesta una sottoscrizione una tantum di <strong>50€ in crypto</strong>.</p>
+                    <p>Per diventare venditore verificato su CrimeMarket Market è richiesta una sottoscrizione una tantum di <strong>50€ in crypto</strong>.</p>
                     <p>Contatta un admin su Telegram per il pagamento:</p>
                     <div class="telegram-contacts">
                         <a href="https://t.me/OpCrime1312" target="_blank" rel="noopener" class="btn btn-accent">📱 @OpCrime1312</a>
@@ -622,7 +622,7 @@
                 </div>
                 <form onsubmit="submitVendorApplication(event)">
                     <input type="text" id="vendorTelegram" placeholder="Il tuo username Telegram (senza @)" required>
-                    <textarea id="vendorMotivation" placeholder="Perché vuoi vendere su CrimeCode?" rows="3" required></textarea>
+                    <textarea id="vendorMotivation" placeholder="Perché vuoi vendere su CrimeMarket?" rows="3" required></textarea>
                     <input type="text" id="vendorSpecialization" placeholder="Cosa vendi? (es: accounts, tools, guides...)">
                     <div class="modal-error" id="vendorError"></div>
                     <button type="submit" class="btn btn-primary btn-full">Invia Richiesta</button>
@@ -694,7 +694,7 @@
                     <span class="shield-tag encrypt">E2E Encrypted</span>
                     <span class="shield-tag notrack">No-Track</span>
                 </div>
-                <p>&copy; 2025 CrimeCode — Tutti i diritti riservati</p>
+                <p>&copy; 2025 CrimeMarket — Tutti i diritti riservati</p>
             </div>
         </div>
     </footer>
