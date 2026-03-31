@@ -314,6 +314,13 @@ function navigate(page, params = {}) {
     if (navLink) navLink.classList.add('active');
 
     switch (page) {
+        case 'home':
+            document.getElementById('pageMarketplace').style.display = '';
+            loadMarketplace();
+            break;
+        case 'dashboard':
+            document.getElementById('pageDashboard').style.display = '';
+            break;
         case 'profile':
             document.getElementById('pageProfile').style.display = '';
             loadProfile(params.id);
@@ -432,8 +439,13 @@ function updateAuthUI() {
     const nav = document.getElementById('headerNav');
     const navLogged = document.getElementById('headerNavLogged');
     if (currentUser) {
-        nav.style.display = 'none';
-        navLogged.style.display = 'flex';
+        if (nav) nav.style.display = 'none';
+        if (navLogged) navLogged.style.display = 'flex';
+        // Show header for logged-in users, hide landing buttons
+        const header = document.querySelector('.header-nexus');
+        if (header) header.style.display = '';
+        const userMenu = document.getElementById('userMenu');
+        if (userMenu) userMenu.style.display = '';
         document.getElementById('userGreeting').textContent = currentUser.username || currentUser.Username || 'User';
         // Credits
         const cc = document.getElementById('creditCount');
@@ -476,8 +488,8 @@ function updateAuthUI() {
         });
         updateChatVisibility();
     } else {
-        nav.style.display = 'flex';
-        navLogged.style.display = 'none';
+        if (nav) nav.style.display = 'flex';
+        if (navLogged) navLogged.style.display = 'none';
         const nlb = document.getElementById('newListingBtn');
         if (nlb) nlb.style.display = 'none';
         const vendorApplyBtn = document.getElementById('vendorApplyBtn');
@@ -580,13 +592,40 @@ function logout() {
 function toggleUserMenu() {
     const dd = document.getElementById('userDropdown');
     dd.classList.toggle('show');
+    closeWalletDropdown();
 }
 function closeUserMenu() {
     const dd = document.getElementById('userDropdown');
     if (dd) dd.classList.remove('show');
 }
+
+// === Wallet Dropdown ===
+function toggleWalletDropdown() {
+    const menu = document.getElementById('walletMenu');
+    if (menu) menu.classList.toggle('show');
+    closeUserMenu();
+}
+function closeWalletDropdown() {
+    const menu = document.getElementById('walletMenu');
+    if (menu) menu.classList.remove('show');
+}
+function connectWallet(provider) {
+    showToast(`Connessione wallet ${provider} in arrivo...`, 'info');
+    closeWalletDropdown();
+}
+function disconnectWallet() {
+    document.getElementById('walletStatus').textContent = 'Nessun wallet collegato';
+    const bal = document.getElementById('walletBalance');
+    if (bal) bal.style.display = 'none';
+    const disc = document.getElementById('disconnectWalletBtn');
+    if (disc) disc.style.display = 'none';
+    showToast('Wallet disconnesso', 'info');
+    closeWalletDropdown();
+}
+
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.user-menu')) closeUserMenu();
+    if (!e.target.closest('.wallet-dropdown')) closeWalletDropdown();
 });
 
 // === Badge Polling ===
