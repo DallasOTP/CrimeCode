@@ -10,7 +10,7 @@ public static class ReviewEndpoints
 {
     public static void MapReviewEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/reviews").RequireAuthorization();
+        var group = app.MapGroup("/api/reviews").RequireAuthorization().RequireRateLimiting("api-write");
 
         // Create review (buyer, after order completed)
         group.MapPost("/", async (CreateReviewRequest req, ClaimsPrincipal principal, CrimeCodeDbContext db) =>

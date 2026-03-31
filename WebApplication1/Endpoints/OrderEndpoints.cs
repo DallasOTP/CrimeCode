@@ -10,7 +10,7 @@ public static class OrderEndpoints
 {
     public static void MapOrderEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/orders").RequireAuthorization();
+        var group = app.MapGroup("/api/orders").RequireAuthorization().RequireRateLimiting("api-write");
 
         // Create order (buyer)
         group.MapPost("/", async (CreateOrderRequest req, ClaimsPrincipal principal, CrimeCodeDbContext db) =>

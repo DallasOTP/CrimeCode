@@ -10,6 +10,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="apple-touch-icon" href="img/logo.png">
+    <!-- Offshore / Privacy protections -->
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="X-DNS-Prefetch-Control" content="off">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -24,6 +27,7 @@
                 <span id="marketStatsBar">Caricamento stats...</span>
             </div>
             <div class="topbar-right">
+                <span class="security-status" id="securityStatus" title="Protezione attiva: Anti-DDoS, Security Headers, Offshore Shield, WebRTC Block, No-Track">🛡️ <span class="security-status-text">SHIELD ON</span></span>
                 <span id="onlineCount">0 utenti online</span>
                 <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Cambia tema">🌙</button>
             </div>
@@ -444,6 +448,15 @@
             </div>
             <div class="footer-bottom">
                 <div class="footer-stats" id="footerStats"></div>
+                <div class="security-shield-bar" id="securityShieldBar">
+                    <span class="shield-icon">🛡️</span>
+                    <span class="shield-label">Protezione Attiva</span>
+                    <span class="shield-tag ddos">Anti-DDoS</span>
+                    <span class="shield-tag headers">Security Headers</span>
+                    <span class="shield-tag offshore">Offshore Shield</span>
+                    <span class="shield-tag encrypt">E2E Encrypted</span>
+                    <span class="shield-tag notrack">No-Track</span>
+                </div>
                 <p>&copy; 2025 CrimeCode — Tutti i diritti riservati</p>
             </div>
         </div>

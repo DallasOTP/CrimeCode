@@ -10,7 +10,7 @@ public static class MarketplaceEndpoints
 {
     public static void MapMarketplaceEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/marketplace");
+        var group = app.MapGroup("/api/marketplace").RequireRateLimiting("api-read");
 
         // List active marketplace items (public)
         group.MapGet("/", async (int? categoryId, int? page, int? pageSize, string? type, string? search, string? currency, CrimeCodeDbContext db) =>

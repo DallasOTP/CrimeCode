@@ -10,7 +10,7 @@ public static class ChatEndpoints
 {
     public static void MapChatEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/chat").RequireAuthorization();
+        var group = app.MapGroup("/api/chat").RequireAuthorization().RequireRateLimiting("api-write");
 
         // Get online users available for chat (excludes current user)
         group.MapGet("/contacts", async (ClaimsPrincipal principal, CrimeCodeDbContext db) =>

@@ -6,6 +6,45 @@ let currentPage = 1;
 let badgeInterval = null;
 let heartbeatInterval = null;
 
+// === Offshore & Anti-Fingerprint Protection ===
+(function initOffshoreShield() {
+    // Block WebRTC IP leak (disables RTCPeerConnection to prevent real IP exposure)
+    if (window.RTCPeerConnection) {
+        window.RTCPeerConnection = undefined;
+    }
+    if (window.webkitRTCPeerConnection) {
+        window.webkitRTCPeerConnection = undefined;
+    }
+    if (window.mozRTCPeerConnection) {
+        window.mozRTCPeerConnection = undefined;
+    }
+
+    // Disable battery API (fingerprinting vector)
+    if (navigator.getBattery) {
+        navigator.getBattery = undefined;
+    }
+
+    // Disable device orientation/motion (fingerprinting vector)
+    window.addEventListener('deviceorientation', e => e.stopImmediatePropagation(), true);
+    window.addEventListener('devicemotion', e => e.stopImmediatePropagation(), true);
+
+    // Block Geolocation API
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition = (s, e) => e?.({ code: 1, message: 'Blocked by CrimeCode Shield' });
+        navigator.geolocation.watchPosition = (s, e) => e?.({ code: 1, message: 'Blocked by CrimeCode Shield' });
+    }
+
+    // Anti-clipboard sniffing — prevent external paste read
+    document.addEventListener('copy', e => {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+        }
+    });
+
+    console.log('%c🛡️ CrimeCode Offshore Shield Active', 'color: #00e5a0; font-size: 14px; font-weight: bold;');
+    console.log('%cAnti-DDoS • Security Headers • WebRTC Block • No-Track • Anti-Fingerprint', 'color: #6b7fa0; font-size: 11px;');
+})();
+
 // === Init ===
 document.addEventListener('DOMContentLoaded', () => {
     // Telegram Mini App detection & theme

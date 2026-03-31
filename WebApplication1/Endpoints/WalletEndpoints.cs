@@ -10,7 +10,7 @@ public static class WalletEndpoints
 {
     public static void MapWalletEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/wallet").RequireAuthorization();
+        var group = app.MapGroup("/api/wallet").RequireAuthorization().RequireRateLimiting("api-write");
 
         // Get my wallets
         group.MapGet("/", async (ClaimsPrincipal principal, CrimeCodeDbContext db) =>

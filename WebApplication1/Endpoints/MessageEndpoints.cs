@@ -10,7 +10,7 @@ public static class MessageEndpoints
 {
     public static void MapMessageEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/messages").RequireAuthorization();
+        var group = app.MapGroup("/api/messages").RequireAuthorization().RequireRateLimiting("api-write");
 
         // Get conversations (inbox)
         group.MapGet("/conversations", async (ClaimsPrincipal principal, CrimeCodeDbContext db) =>

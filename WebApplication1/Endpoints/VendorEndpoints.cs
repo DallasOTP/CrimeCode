@@ -10,7 +10,7 @@ public static class VendorEndpoints
 {
     public static void MapVendorEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/vendor").RequireAuthorization();
+        var group = app.MapGroup("/api/vendor").RequireAuthorization().RequireRateLimiting("api-write");
 
         // Apply to become vendor
         group.MapPost("/apply", async (VendorApplicationRequest req, ClaimsPrincipal principal, CrimeCodeDbContext db) =>

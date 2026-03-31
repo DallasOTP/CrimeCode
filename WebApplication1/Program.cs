@@ -2,14 +2,19 @@ using System.Text;
 using System.Threading.RateLimiting;
 using CrimeCode.Data;
 using CrimeCode.Endpoints;
+using CrimeCode.Middleware;
 using CrimeCode.Models;
 using CrimeCode.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Hide server identity from responses
+builder.WebHost.ConfigureKestrel(opt => opt.AddServerHeader = false);
 
 // Database
 builder.Services.AddDbContext<CrimeCodeDbContext>(options =>
@@ -29,22 +34,61 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Rate Limiting
+// Rate Limiting — multi-tier with sliding windows and per-IP partitioning
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = 429;
-    options.AddFixedWindowLimiter("global", opt =>
+
+    // Global: 200 req/min per IP (sliding window for smoother throttling)
+    options.AddSlidingWindowLimiter("global", opt =>
     {
-        opt.PermitLimit = 100;
+        opt.PermitLimit = 200;
         opt.Window = TimeSpan.FromMinutes(1);
+        opt.SegmentsPerWindow = 4;
         opt.QueueLimit = 0;
     });
-    options.AddFixedWindowLimiter("auth", opt =>
+
+    // Auth endpoints: 8 req/5min per IP (brute-force protection)
+    options.AddSlidingWindowLimiter("auth", opt =>
     {
-        opt.PermitLimit = 10;
+        opt.PermitLimit = 8;
         opt.Window = TimeSpan.FromMinutes(5);
+        opt.SegmentsPerWindow = 5;
         opt.QueueLimit = 0;
     });
+
+    // API writes (POST/PUT/DELETE): 30 req/min per IP
+    options.AddSlidingWindowLimiter("api-write", opt =>
+    {
+        opt.PermitLimit = 30;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.SegmentsPerWindow = 4;
+        opt.QueueLimit = 0;
+    });
+
+    // Search/listing: 60 req/min per IP (anti-scraping)
+    options.AddSlidingWindowLimiter("api-read", opt =>
+    {
+        opt.PermitLimit = 60;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.SegmentsPerWindow = 4;
+        opt.QueueLimit = 0;
+    });
+
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.Headers["Retry-After"] = "10";
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new { error = "Rate limit exceeded. Try again later.", retryAfter = 10 }, token);
+    };
+});
+
+// Forwarded headers (for Railway / reverse proxy — correct client IP)
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
 });
 
 // Auth
@@ -80,7 +124,20 @@ using (var scope = app.Services.CreateScope())
 // Healthcheck endpoint — responds immediately, before any middleware
 app.MapGet("/healthz", () => Results.Ok("ok"));
 
-// Serve static files (wwwroot)
+// --- Security Pipeline ---
+// 1. Forwarded headers (must be first — fixes client IP for proxied requests)
+app.UseForwardedHeaders();
+
+// 2. DDoS protection — IP tracking, burst detection, auto-ban
+app.UseMiddleware<DdosProtectionMiddleware>();
+
+// 3. Request validation — blocks injection, path traversal, oversized bodies
+app.UseMiddleware<RequestValidationMiddleware>();
+
+// 4. Security headers — CSP, HSTS, X-Frame-Options, anti-sniff, anti-fingerprint
+app.UseMiddleware<SecurityHeadersMiddleware>();
+
+// 5. Serve static files (wwwroot)
 app.UseStaticFiles();
 
 app.UseCors();
