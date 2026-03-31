@@ -105,6 +105,57 @@
     <!-- Main Content -->
     <main class="main" id="mainContent">
 
+        <!-- Landing Page (visible when not logged in) -->
+        <div id="pageLanding">
+            <div class="landing-hero">
+                <div class="landing-shield-anim">
+                    <div class="shield-ring"></div>
+                    <div class="shield-ring ring-2"></div>
+                    <div class="shield-ring ring-3"></div>
+                    <span class="shield-core">🛡️</span>
+                </div>
+                <h1 class="landing-title">Crime<span class="accent">Code</span></h1>
+                <p class="landing-subtitle">Il marketplace underground più sicuro d'Italia</p>
+                <p class="landing-desc">Piattaforma protetta con Anti-DDoS, Offshore Shield, crittografia end-to-end e protezione anti-bot. Accedi per esplorare il marketplace.</p>
+                <div class="landing-stats" id="landingStats"></div>
+                <div class="landing-actions">
+                    <button class="btn btn-primary btn-lg btn-glow" onclick="showModal('login')">🔐 Accedi</button>
+                    <button class="btn btn-outline btn-lg" onclick="showModal('register')">🚀 Registrati</button>
+                </div>
+                <div class="landing-features">
+                    <div class="landing-feature">
+                        <span class="landing-feature-icon">🛡️</span>
+                        <span class="landing-feature-title">Anti-DDoS</span>
+                        <span class="landing-feature-desc">Protezione avanzata contro attacchi volumetrici</span>
+                    </div>
+                    <div class="landing-feature">
+                        <span class="landing-feature-icon">🌊</span>
+                        <span class="landing-feature-title">Offshore Shield</span>
+                        <span class="landing-feature-desc">WebRTC block, anti-fingerprint, no-track</span>
+                    </div>
+                    <div class="landing-feature">
+                        <span class="landing-feature-icon">🤖</span>
+                        <span class="landing-feature-title">Anti-Bot</span>
+                        <span class="landing-feature-desc">Captcha challenge su ogni accesso</span>
+                    </div>
+                    <div class="landing-feature">
+                        <span class="landing-feature-icon">🔒</span>
+                        <span class="landing-feature-title">E2E Encrypted</span>
+                        <span class="landing-feature-desc">Comunicazioni protette end-to-end</span>
+                    </div>
+                </div>
+                <div class="security-shield-bar landing-shield-bar">
+                    <span class="shield-icon">🛡️</span>
+                    <span class="shield-label">Protezione Attiva</span>
+                    <span class="shield-tag ddos">Anti-DDoS</span>
+                    <span class="shield-tag headers">Security Headers</span>
+                    <span class="shield-tag offshore">Offshore Shield</span>
+                    <span class="shield-tag encrypt">E2E Encrypted</span>
+                    <span class="shield-tag notrack">No-Track</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Profile -->
         <div id="pageProfile" style="display:none">
             <div class="profile-detail" id="profileDetail"></div>
@@ -278,6 +329,11 @@
                         <label for="login2FACode">Codice 2FA</label>
                         <input type="text" id="login2FACode" placeholder="000000" maxlength="6" autocomplete="one-time-code">
                     </div>
+                    <div class="captcha-box" id="loginCaptcha">
+                        <label class="captcha-label">🤖 Verifica Anti-Bot</label>
+                        <div class="captcha-challenge" id="loginCaptchaChallenge"></div>
+                        <input type="text" id="loginCaptchaAnswer" placeholder="Inserisci la risposta" required autocomplete="off">
+                    </div>
                     <div class="modal-error" id="loginError"></div>
                     <button type="submit" class="btn btn-primary btn-full btn-glow">Accedi</button>
                 </form>
@@ -303,6 +359,11 @@
                     <div class="input-group">
                         <label for="regPassword">Password</label>
                         <input type="password" id="regPassword" placeholder="Minimo 6 caratteri" required minlength="6">
+                    </div>
+                    <div class="captcha-box" id="registerCaptcha">
+                        <label class="captcha-label">🤖 Verifica Anti-Bot</label>
+                        <div class="captcha-challenge" id="registerCaptchaChallenge"></div>
+                        <input type="text" id="registerCaptchaAnswer" placeholder="Inserisci la risposta" required autocomplete="off">
                     </div>
                     <div class="modal-error" id="registerError"></div>
                     <button type="submit" class="btn btn-primary btn-full btn-glow">Crea Account</button>

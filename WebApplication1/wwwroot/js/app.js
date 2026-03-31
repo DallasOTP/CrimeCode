@@ -5,6 +5,44 @@ let currentUser = null;
 let currentPage = 1;
 let badgeInterval = null;
 let heartbeatInterval = null;
+let captchaStore = {};
+
+// === Captcha Anti-Bot System ===
+function generateCaptcha(formId) {
+    const ops = ['+', '-', '×'];
+    const op = ops[Math.floor(Math.random() * ops.length)];
+    let a, b, answer;
+    switch (op) {
+        case '+':
+            a = Math.floor(Math.random() * 40) + 5;
+            b = Math.floor(Math.random() * 40) + 5;
+            answer = a + b;
+            break;
+        case '-':
+            a = Math.floor(Math.random() * 40) + 20;
+            b = Math.floor(Math.random() * 20) + 1;
+            answer = a - b;
+            break;
+        case '×':
+            a = Math.floor(Math.random() * 12) + 2;
+            b = Math.floor(Math.random() * 10) + 2;
+            answer = a * b;
+            break;
+    }
+    captchaStore[formId] = answer;
+    const el = document.getElementById(formId + 'CaptchaChallenge');
+    if (el) {
+        el.innerHTML = `<span class="captcha-question">Quanto fa <strong>${a} ${op} ${b}</strong> ?</span>`;
+    }
+    const input = document.getElementById(formId + 'CaptchaAnswer');
+    if (input) input.value = '';
+}
+
+function verifyCaptcha(formId) {
+    const input = document.getElementById(formId + 'CaptchaAnswer');
+    if (!input) return false;
+    return parseInt(input.value, 10) === captchaStore[formId];
+}
 
 // === Offshore & Anti-Fingerprint Protection ===
 (function initOffshoreShield() {
@@ -63,7 +101,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     updateAuthUI();
     loadMarketplaceStats();
-    navigate('marketplace');
+
+    // Show landing or marketplace based on auth
+    if (currentUser) {
+        navigate('marketplace');
+    } else {
+        showLanding();
+    }
 });
 
 // === Telegram Mini App ===
@@ -144,6 +188,11 @@ async function refreshMe() {
 
 // === Navigation ===
 function navigate(page, params = {}) {
+    // Require authentication — redirect to landing if not logged in
+    if (!currentUser && page !== 'landing') {
+        showLanding();
+        return;
+    }
     document.querySelectorAll('#mainContent > div').forEach(d => {
         d.style.display = 'none';
         d.classList.remove('page-enter');
@@ -245,6 +294,28 @@ function navigate(page, params = {}) {
     }
 }
 
+function showLanding() {
+    document.querySelectorAll('#mainContent > div').forEach(d => {
+        d.style.display = 'none';
+        d.classList.remove('page-enter');
+    });
+    document.getElementById('pageLanding').style.display = '';
+    // Show landing stats
+    loadLandingStats();
+}
+
+async function loadLandingStats() {
+    try {
+        const s = await api('/leaderboard/stats');
+        const el = document.getElementById('landingStats');
+        if (el) el.innerHTML = `
+            <div class="landing-stat"><span class="landing-stat-num">${s.totalUsers}</span><span>Utenti</span></div>
+            <div class="landing-stat"><span class="landing-stat-num">${s.totalListings}</span><span>Annunci</span></div>
+            <div class="landing-stat"><span class="landing-stat-num">${s.totalSales}</span><span>Vendite</span></div>
+            <div class="landing-stat"><span class="landing-stat-num">${s.onlineUsers}</span><span>Online</span></div>`;
+    } catch { /* ignore */ }
+}
+
 // === Auth ===
 function updateAuthUI() {
     const nav = document.getElementById('headerNav');
@@ -313,6 +384,11 @@ async function register(e) {
     const errEl = document.getElementById('registerError');
     const btn = e.target.querySelector('button[type="submit"]');
     errEl.textContent = '';
+    if (!verifyCaptcha('register')) {
+        errEl.textContent = 'Captcha errato. Riprova.';
+        generateCaptcha('register');
+        return;
+    }
     const origText = btn.textContent;
     btn.textContent = 'Creazione...';
     btn.disabled = true;
@@ -343,6 +419,11 @@ async function login(e) {
     const errEl = document.getElementById('loginError');
     const btn = e.target.querySelector('button[type="submit"]');
     errEl.textContent = '';
+    if (!verifyCaptcha('login')) {
+        errEl.textContent = 'Captcha errato. Riprova.';
+        generateCaptcha('login');
+        return;
+    }
     const origText = btn.textContent;
     btn.textContent = 'Accesso...';
     btn.disabled = true;
@@ -381,7 +462,7 @@ function logout() {
     updateAuthUI();
     stopBadgePolling();
     stopHeartbeat();
-    navigate('marketplace');
+    showLanding();
 }
 
 // === User Menu ===
@@ -444,16 +525,17 @@ function stopHeartbeat() {
     if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
 }
 
-// === Forum Stats ===
+// === Marketplace Stats ===
 async function loadMarketplaceStats() {
     try {
         const s = await api('/leaderboard/stats');
+        const u = s.totalUsers || 0, l = s.totalListings || 0, v = s.totalSales || 0, o = s.onlineUsers || 0;
         const bar = document.getElementById('marketStatsBar');
-        if (bar) bar.textContent = `${s.totalUsers} utenti · ${s.totalListings} annunci · ${s.totalSales} vendite`;
+        if (bar) bar.textContent = `${u} utenti · ${l} annunci · ${v} vendite`;
         const oc = document.getElementById('onlineCount');
-        if (oc) oc.textContent = `${s.onlineUsers} online`;
+        if (oc) oc.textContent = `${o} online`;
         const fs = document.getElementById('footerStats');
-        if (fs) fs.textContent = `${s.totalUsers} utenti · ${s.totalListings} annunci · ${s.totalSales} vendite · ${s.onlineUsers} online`;
+        if (fs) fs.textContent = `${u} utenti · ${l} annunci · ${v} vendite · ${o} online`;
     } catch { /* ignore */ }
 }
 
@@ -486,6 +568,8 @@ function showModal(type, params = {}) {
         setRepPoints(1);
     }
     if (type === 'avatar') loadAvatarPreview();
+    if (type === 'login') generateCaptcha('login');
+    if (type === 'register') generateCaptcha('register');
 }
 function closeModal() {
     document.getElementById('modalOverlay').classList.remove('active');
@@ -512,10 +596,6 @@ async function loadCategoriesSelect(selectId, marketplaceOnly) {
         sel.innerHTML = options;
     } catch { /* ignore */ }
 }
-
-// === Shoutbox (REMOVED) ===
-
-// === Forum (REMOVED — Marketplace only) ===
 
 function formatContent(text) {
     if (!text) return '';
@@ -1456,7 +1536,7 @@ async function loadNotifications() {
             const iconMap = { Reply: '💬', Like: '❤️', Message: '✉️', Mention: '📣', System: '⚙️' };
             const icon = iconMap[n.type] || '🔔';
             const unread = n.isRead ? '' : ' unread';
-            const clickAction = n.threadId ? `navigate('thread',{id:${n.threadId}})` : '';
+            const clickAction = n.listingId ? `navigate('listing',{id:${n.listingId}})` : '';
             return `<div class="notification-item${unread}" onclick="${clickAction};markNotifRead(${n.id})">
                 <span class="notification-icon">${icon}</span>
                 <div class="notification-body">
@@ -1601,8 +1681,8 @@ async function loadAdmin() {
                     <div class="admin-stat"><div class="stat-value">🟢 ${s.onlineUsers}</div><div class="stat-label">Online</div></div>
                 </div>
                 <h3 style="margin:1.2rem 0 0.6rem;font-size:0.9rem;font-family:'Orbitron',sans-serif;letter-spacing:1px">⏰ Utenti recenti</h3>
-                <div class="threads-list">
-                    ${s.recentUsers.map(u => `<div class="thread-card" onclick="navigate('profile',{id:${u.id}})"><div class="thread-card-body"><div class="thread-card-title">${escapeHtml(u.username)}</div><div class="thread-card-meta"><span>${timeAgo(u.createdAt)}</span></div></div></div>`).join('')}
+                <div class="user-list">
+                    ${s.recentUsers.map(u => `<div class="user-card" onclick="navigate('profile',{id:${u.id}})"><div class="user-card-body"><div class="user-card-title">${escapeHtml(u.username)}</div><div class="user-card-meta"><span>${timeAgo(u.createdAt)}</span></div></div></div>`).join('')}
                 </div>`;
         } else if (adminTab === 'users') {
             await loadAdminUsers(content);
@@ -2636,8 +2716,8 @@ async function loadAdminAnalytics(container) {
 
             ${d.topVendors?.length ? `<div class="analytics-section">
                 <h3>🏆 Top Venditori</h3>
-                <div class="threads-list">
-                    ${d.topVendors.map((v, i) => `<div class="thread-card"><div class="thread-card-body"><div class="thread-card-title">${i + 1}. ${escapeHtml(v.username)}</div><div class="thread-card-meta"><span>📦 ${v.totalSales} vendite · 💰 ${v.totalRevenue.toFixed(2)}</span></div></div></div>`).join('')}
+                <div class="user-list">
+                    ${d.topVendors.map((v, i) => `<div class="user-card"><div class="user-card-body"><div class="user-card-title">${i + 1}. ${escapeHtml(v.username)}</div><div class="user-card-meta"><span>📦 ${v.totalSales} vendite · 💰 ${v.totalRevenue.toFixed(2)}</span></div></div></div>`).join('')}
                 </div>
             </div>` : ''}
         </div>`;
@@ -2682,7 +2762,7 @@ async function loadAdminLogs(container, page = 1) {
 }
 
 function getLogIcon(action) {
-    const icons = { BanUser: '🚫', UnbanUser: '✅', ChangeRole: '🔄', DeleteUser: '🗑️', ModifyCredits: '💰', ReviewListing: '🏪', ResolveDispute: '⚖️', DeleteThread: '📝' };
+    const icons = { BanUser: '🚫', UnbanUser: '✅', ChangeRole: '🔄', DeleteUser: '🗑️', ModifyCredits: '💰', ReviewListing: '🏪', ResolveDispute: '⚖️' };
     return icons[action] || '📋';
 }
 

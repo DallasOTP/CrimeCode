@@ -3472,3 +3472,268 @@ body.light-theme pre { background: #2d3748; color: #e2e8f0; }
     
     .ticket-admin-actions { flex-direction: column; }
     .ticket-detail-meta { flex-direction: column; gap: 0.3rem; }
+}
+
+/* ========================================
+   LANDING PAGE
+   ======================================== */
+.landing-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 85vh;
+    text-align: center;
+    padding: 3rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+}
+.landing-hero::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 600px; height: 600px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(0,229,160,0.08) 0%, transparent 70%);
+    pointer-events: none;
+}
+.landing-shield {
+    position: relative;
+    width: 120px; height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+.landing-shield-icon {
+    font-size: 64px;
+    z-index: 2;
+    filter: drop-shadow(0 0 20px rgba(0,229,160,0.5));
+}
+.shield-ring {
+    position: absolute;
+    border: 2px solid rgba(0,229,160,0.2);
+    border-radius: 50%;
+    animation: shieldRingPulse 3s ease-in-out infinite;
+}
+.shield-ring:nth-child(2) { width: 100px; height: 100px; animation-delay: 0s; }
+.shield-ring:nth-child(3) { width: 140px; height: 140px; animation-delay: 0.5s; border-color: rgba(0,229,160,0.12); }
+.shield-ring:nth-child(4) { width: 180px; height: 180px; animation-delay: 1s; border-color: rgba(0,229,160,0.06); }
+
+@keyframes shieldRingPulse {
+    0%, 100% { transform: scale(1); opacity: 0.6; }
+    50% { transform: scale(1.15); opacity: 1; }
+}
+
+.landing-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    letter-spacing: -1px;
+}
+.landing-title .accent { color: var(--accent); }
+.landing-subtitle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+.landing-desc {
+    color: var(--text-secondary);
+    font-size: 1.05rem;
+    max-width: 520px;
+    line-height: 1.7;
+    margin-bottom: 2rem;
+}
+.landing-stats {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.landing-stat {
+    text-align: center;
+}
+.landing-stat-num {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--accent);
+}
+.landing-stat-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.landing-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 3rem;
+}
+.landing-actions .btn {
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    font-family: 'JetBrains Mono', monospace;
+    transition: all 0.2s;
+}
+.landing-actions .btn-primary {
+    background: var(--accent);
+    color: var(--bg-primary);
+}
+.landing-actions .btn-primary:hover {
+    background: #00ffb7;
+    box-shadow: 0 0 20px rgba(0,229,160,0.4);
+}
+.landing-actions .btn-outline {
+    background: transparent;
+    color: var(--accent);
+    border: 2px solid var(--accent);
+}
+.landing-actions .btn-outline:hover {
+    background: rgba(0,229,160,0.1);
+}
+.landing-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    max-width: 900px;
+    width: 100%;
+    margin-bottom: 2rem;
+}
+.landing-feature {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.2s;
+}
+.landing-feature:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0,229,160,0.1);
+}
+.landing-feature-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+.landing-feature h3 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    margin-bottom: 0.3rem;
+}
+.landing-feature p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+.landing-security-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+/* ========================================
+   CAPTCHA BOX
+   ======================================== */
+.captcha-box {
+    background: rgba(0,229,160,0.05);
+    border: 1px solid rgba(0,229,160,0.15);
+    border-radius: 8px;
+    padding: 0.8rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.captcha-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}
+.captcha-question {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+.captcha-challenge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    background: var(--bg-primary);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    letter-spacing: 2px;
+    user-select: none;
+}
+.captcha-question input {
+    flex: 1;
+    max-width: 100px;
+}
+
+@media (max-width: 768px) {
+    .landing-title { font-size: 2rem; }
+    .landing-features { grid-template-columns: 1fr 1fr; }
+    .landing-stats { gap: 1.2rem; }
+    .landing-actions { flex-direction: column; width: 100%; max-width: 300px; }
+}
+@media (max-width: 480px) {
+    .landing-features { grid-template-columns: 1fr; }
+    .landing-stats { flex-direction: column; gap: 0.8rem; }
+}
+
+/* === User Card (alias for thread-card) === */
+.user-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.user-card {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    align-items: center;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    transition: all 0.25s;
+}
+.user-card:hover {
+    border-color: var(--accent);
+    background: var(--bg-card-hover);
+    box-shadow: var(--shadow-glow);
+    transform: translateX(3px);
+}
+.user-card-body { min-width: 0; }
+.user-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.user-card-meta {
+    font-size: 11px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}

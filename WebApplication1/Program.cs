@@ -114,11 +114,24 @@ builder.Services.AddSingleton<AuthService>();
 
 var app = builder.Build();
 
-// Ensure DB schema is created immediately (fast, no seeding)
+// Ensure DB schema is created — force reset if schema version mismatch
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CrimeCodeDbContext>();
-    db.Database.EnsureCreated();
+    var dbPath = db.Database.GetConnectionString()?.Replace("Data Source=", "") ?? "crimecode.db";
+    var versionFile = Path.Combine(Path.GetDirectoryName(dbPath) ?? ".", ".db_version");
+    const string currentVersion = "v3_marketplace_only";
+    var needsReset = !File.Exists(versionFile) || File.ReadAllText(versionFile).Trim() != currentVersion;
+    if (needsReset)
+    {
+        db.Database.EnsureDeleted();
+        db.Database.EnsureCreated();
+        File.WriteAllText(versionFile, currentVersion);
+    }
+    else
+    {
+        db.Database.EnsureCreated();
+    }
 }
 
 // Healthcheck endpoint — responds immediately, before any middleware
