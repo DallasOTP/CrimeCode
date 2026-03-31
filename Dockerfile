@@ -8,9 +8,8 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# Railway volume for SQLite persistence
+# Railway: mount volume at /data via dashboard
 RUN mkdir -p /data
-VOLUME /data
 
 ENV ASPNETCORE_URLS=http://+:${PORT:-8080}
 ENV ConnectionStrings__DefaultConnection="Data Source=/data/crimecode.db"
