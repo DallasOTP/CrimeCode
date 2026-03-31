@@ -242,6 +242,17 @@
                         </div>
                     </div>
 
+                    <!-- === NOTIFICATIONS === -->
+                    <div class="dash-section" id="dashSection-notifications" style="display:none">
+                        <div class="dash-section-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                            <h2 class="dash-section-title" style="margin:0;">🔔 Notifiche</h2>
+                            <button class="btn btn-outline btn-sm" onclick="markAllNotificationsRead()">Segna tutte come lette</button>
+                        </div>
+                        <div id="dashNotificationsList">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
                     <!-- === BLOCK USERS === -->
                     <div class="dash-section" id="dashSection-block" style="display:none">
                         <h2 class="dash-section-title">Block Users</h2>

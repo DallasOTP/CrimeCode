@@ -37,6 +37,7 @@ function showDashSection(section) {
     if (section === 'messenger') loadDashMessenger();
     if (section === 'tickets') loadDashTickets();
     if (section === 'block') loadDashBlockedUsers();
+    if (section === 'notifications') loadDashNotifications();
 }
 
 function initDashboard() {
@@ -2012,8 +2013,8 @@ async function removeAvatar() {
 }
 
 // === Notifications ===
-async function loadNotifications() {
-    const container = document.getElementById('notificationsList');
+async function loadDashNotifications() {
+    const container = document.getElementById('dashNotificationsList');
     container.innerHTML = '<div class="loading">Caricamento</div>';
     try {
         const notifs = await api('/notifications');
@@ -2025,7 +2026,7 @@ async function loadNotifications() {
             const iconMap = { Reply: '💬', Like: '❤️', Message: '✉️', Mention: '📣', System: '⚙️' };
             const icon = iconMap[n.type] || '🔔';
             const unread = n.isRead ? '' : ' unread';
-            const clickAction = n.listingId ? `navigate('listing',{id:${n.listingId}})` : '';
+            const clickAction = n.listingId ? `navigate('listingDetail',{id:${n.listingId}})` : '';
             return `<div class="notification-item${unread}" onclick="${clickAction};markNotifRead(${n.id})">
                 <span class="notification-icon">${icon}</span>
                 <div class="notification-body">
@@ -2035,7 +2036,7 @@ async function loadNotifications() {
             </div>`;
         }).join('');
     } catch {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore</p></div>';
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore nel caricamento delle notifiche</p></div>';
     }
 }
 
@@ -2043,10 +2044,10 @@ async function markNotifRead(id) {
     try { await api(`/notifications/${id}/read`, { method: 'PUT' }); updateBadges(); } catch { /* ignore */ }
 }
 async function markAllNotificationsRead() {
-    try { await api('/notifications/read-all', { method: 'PUT' }); updateBadges(); loadNotifications(); } catch { /* ignore */ }
+    try { await api('/notifications/read-all', { method: 'PUT' }); updateBadges(); loadDashNotifications(); } catch { /* ignore */ }
 }
 async function deleteNotification(id) {
-    try { await api(`/notifications/${id}`, { method: 'DELETE' }); loadNotifications(); updateBadges(); } catch { /* ignore */ }
+    try { await api(`/notifications/${id}`, { method: 'DELETE' }); loadDashNotifications(); updateBadges(); } catch { /* ignore */ }
 }
 
 // === Messages ===
