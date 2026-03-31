@@ -18,5 +18,8 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 
+# Large external tools
+opencode-main/
+
 # Secrets (use env vars in production)
 appsettings.Production.json

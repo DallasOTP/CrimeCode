@@ -144,7 +144,7 @@ public static class OrderEndpoints
         });
 
         // Deliver manually (seller marks digital delivery)
-        group.MapPut("/{id:int}/deliver", async (int id, string content, ClaimsPrincipal principal, CrimeCodeDbContext db) =>
+        group.MapPut("/{id:int}/deliver", async (int id, DeliverOrderRequest req, ClaimsPrincipal principal, CrimeCodeDbContext db) =>
         {
             var userId = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -153,7 +153,7 @@ public static class OrderEndpoints
             if (order.SellerId != userId) return Results.Forbid();
             if (order.EscrowStatus != "Funded") return Results.BadRequest(new { error = "Escrow non ancora finanziato" });
 
-            order.DigitalDeliveryContent = content;
+            order.DigitalDeliveryContent = req.Content;
             order.IsDelivered = true;
             order.Status = "Delivered";
             order.UpdatedAt = DateTime.UtcNow;

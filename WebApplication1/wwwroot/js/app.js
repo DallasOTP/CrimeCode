@@ -1897,7 +1897,7 @@ async function deliverOrder(orderId) {
     const content = document.getElementById('deliverContent').value.trim();
     if (!content) return showToast('Inserisci il contenuto da consegnare', 'error');
     try {
-        await api(`/orders/${orderId}/deliver?content=${encodeURIComponent(content)}`, { method: 'PUT' });
+        await api(`/orders/${orderId}/deliver`, { method: 'PUT', body: JSON.stringify({ content }) });
         showToast('Contenuto consegnato!', 'success');
         loadOrderDetail(orderId);
     } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }

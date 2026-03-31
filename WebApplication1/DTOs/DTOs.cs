@@ -64,6 +64,7 @@ public record OrderDto(int Id, int ListingId, string ListingTitle, string? Listi
     string? DigitalDeliveryContent, string? DisputeReason, DateTime CreatedAt, DateTime? UpdatedAt);
 public record FundEscrowRequest(string BuyerTxId);
 public record ShipOrderRequest(string TrackingNumber);
+public record DeliverOrderRequest(string Content);
 public record DisputeOrderRequest(string Reason);
 
 // --- Live Chat ---
