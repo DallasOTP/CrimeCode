@@ -23,6 +23,13 @@ public class User
     public DateTime? VendorApprovedAt { get; set; }
     public string? VendorBio { get; set; }
 
+    // Advanced Profile
+    public string? BannerUrl { get; set; }
+    public string? Website { get; set; }
+    public string? Location { get; set; }
+    public string? Jabber { get; set; }
+    public DateTime? Birthday { get; set; }
+
     // TOTP 2FA
     public string? TotpSecret { get; set; }
     public bool Is2FAEnabled { get; set; } = false;

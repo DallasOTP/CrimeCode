@@ -1,0 +1,21 @@
+{
+    "name": "CrimeCode — Underground Market",
+    "short_name": "CrimeCode",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0a0e17",
+    "theme_color": "#0a0e17",
+    "description": "La community underground italiana per cybersecurity, hacking e tecnologia.",
+    "icons": [
+        {
+            "src": "img/logo.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "img/logo.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

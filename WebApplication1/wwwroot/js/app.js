@@ -109,7 +109,10 @@ async function refreshMe() {
 
 // === Navigation ===
 function navigate(page, params = {}) {
-    document.querySelectorAll('#mainContent > div').forEach(d => d.style.display = 'none');
+    document.querySelectorAll('#mainContent > div').forEach(d => {
+        d.style.display = 'none';
+        d.classList.remove('page-enter');
+    });
     // Update nav links
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
     const navLink = document.querySelector(`.nav-link[data-page="${page}"]`);
@@ -200,9 +203,22 @@ function navigate(page, params = {}) {
             document.getElementById('page2FA').style.display = '';
             load2FASettings();
             break;
+        case 'tickets':
+            document.getElementById('pageTickets').style.display = '';
+            loadTickets();
+            break;
+        case 'ticketDetail':
+            document.getElementById('pageTicketDetail').style.display = '';
+            loadTicketDetail(params.id);
+            break;
     }
     closeUserMenu();
     window.scrollTo(0, 0);
+    // Animate page entrance
+    const visiblePage = document.querySelector('#mainContent > div[style*="display: block"], #mainContent > div:not([style*="display: none"]):not([style*="display:none"])');
+    if (visiblePage) {
+        visiblePage.classList.add('page-enter');
+    }
 }
 
 // === Auth ===
@@ -1069,6 +1085,14 @@ async function loadProfile(id) {
             </div>`;
 
         if (u.bio) html += `<div class="profile-bio">${escapeHtml(u.bio)}</div>`;
+
+        // Advanced profile info
+        const infoItems = [];
+        if (u.location) infoItems.push(`📍 ${escapeHtml(u.location)}`);
+        if (u.website) infoItems.push(`🌐 <a href="${escapeHtml(u.website)}" target="_blank" rel="noopener">${escapeHtml(u.website)}</a>`);
+        if (u.jabber) infoItems.push(`💬 ${escapeHtml(u.jabber)}`);
+        if (u.birthday) infoItems.push(`🎂 ${new Date(u.birthday).toLocaleDateString('it-IT')}`);
+        if (infoItems.length) html += `<div class="profile-info-extra">${infoItems.join(' · ')}</div>`;
         
         // Edit form (hidden by default) 
         if (isOwnProfile) {
@@ -1077,6 +1101,16 @@ async function loadProfile(id) {
                 <textarea id="editBio" rows="3">${escapeHtml(u.bio || '')}</textarea>
                 <label>Firma</label>
                 <input type="text" id="editSignature" value="${escapeHtml(u.signature || '')}" maxlength="200">
+                <label>Banner URL</label>
+                <input type="text" id="editBannerUrl" value="${escapeHtml(u.bannerUrl || '')}" placeholder="https://..." maxlength="500">
+                <label>Sito Web</label>
+                <input type="text" id="editWebsite" value="${escapeHtml(u.website || '')}" placeholder="https://..." maxlength="200">
+                <label>Posizione</label>
+                <input type="text" id="editLocation" value="${escapeHtml(u.location || '')}" maxlength="100">
+                <label>Jabber/XMPP</label>
+                <input type="text" id="editJabber" value="${escapeHtml(u.jabber || '')}" maxlength="100">
+                <label>Data di nascita</label>
+                <input type="date" id="editBirthday" value="${u.birthday ? new Date(u.birthday).toISOString().split('T')[0] : ''}">
                 <div style="margin-top:0.6rem;display:flex;gap:0.5rem">
                     <button class="btn btn-primary btn-sm" onclick="saveProfile(${u.id})">Salva</button>
                     <button class="btn btn-outline btn-sm" onclick="document.getElementById('profileEditForm').style.display='none'">Annulla</button>
@@ -1152,15 +1186,22 @@ function toggleProfileEdit(userId) {
 
 async function saveProfile(userId) {
     try {
+        const birthdayVal = document.getElementById('editBirthday')?.value;
         await api(`/users/${userId}/profile`, {
             method: 'PUT',
             body: JSON.stringify({
                 bio: document.getElementById('editBio').value.trim() || null,
-                signature: document.getElementById('editSignature').value.trim() || null
+                signature: document.getElementById('editSignature').value.trim() || null,
+                bannerUrl: document.getElementById('editBannerUrl')?.value.trim() || null,
+                website: document.getElementById('editWebsite')?.value.trim() || null,
+                location: document.getElementById('editLocation')?.value.trim() || null,
+                jabber: document.getElementById('editJabber')?.value.trim() || null,
+                birthday: birthdayVal ? new Date(birthdayVal).toISOString() : null
             })
         });
+        showToast('Profilo aggiornato', 'success');
         loadProfile(userId);
-    } catch (err) { alert(err.data?.error || 'Errore'); }
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
 }
 
 // === Reputation ===
@@ -1579,6 +1620,17 @@ function setOrderTab(btn) {
 async function loadMyOrders(type = 'buying') {
     const list = document.getElementById('ordersList');
     list.innerHTML = '<div class="loading">Caricamento</div>';
+    // Add export button if not present
+    const ordersPage = document.getElementById('pageMyOrders');
+    if (!ordersPage.querySelector('.export-csv-btn')) {
+        const h2 = ordersPage.querySelector('h2');
+        if (h2) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'page-header-row';
+            wrapper.innerHTML = `<h2>📋 I Miei Ordini</h2><button class="btn btn-outline btn-sm export-csv-btn" onclick="exportOrdersCsv()">📥 Export CSV</button>`;
+            h2.replaceWith(wrapper);
+        }
+    }
     try {
         const orders = await api(`/orders/${type}`);
         if (!orders || orders.length === 0) {
@@ -1981,11 +2033,14 @@ async function loadAdmin() {
         <h2>⚙️ Pannello Admin</h2>
         <div class="profile-tabs" style="margin-bottom:1rem;flex-wrap:wrap">
             <button class="${adminTab === 'stats' ? 'active' : ''}" onclick="adminTab='stats';loadAdmin()">📊 Stats</button>
+            <button class="${adminTab === 'analytics' ? 'active' : ''}" onclick="adminTab='analytics';loadAdmin()">📈 Analytics</button>
             <button class="${adminTab === 'users' ? 'active' : ''}" onclick="adminTab='users';loadAdmin()">👥 Utenti</button>
             <button class="${adminTab === 'threads' ? 'active' : ''}" onclick="adminTab='threads';loadAdmin()">📝 Thread</button>
             <button class="${adminTab === 'listings' ? 'active' : ''}" onclick="adminTab='listings';loadAdmin()">🏪 Annunci</button>
             <button class="${adminTab === 'vendorApps' ? 'active' : ''}" onclick="adminTab='vendorApps';loadAdmin()">📋 Vendor</button>
             <button class="${adminTab === 'disputes' ? 'active' : ''}" onclick="adminTab='disputes';loadAdmin()">⚠️ Dispute</button>
+            <button class="${adminTab === 'adminTickets' ? 'active' : ''}" onclick="adminTab='adminTickets';loadAdmin()">🎫 Ticket</button>
+            <button class="${adminTab === 'logs' ? 'active' : ''}" onclick="adminTab='logs';loadAdmin()">📜 Logs</button>
         </div>
         <div id="adminContent"><div class="loading">Caricamento</div></div>`;
 
@@ -2015,6 +2070,12 @@ async function loadAdmin() {
             await loadAdminVendorApps(content);
         } else if (adminTab === 'disputes') {
             await loadAdminDisputes(content);
+        } else if (adminTab === 'analytics') {
+            await loadAdminAnalytics(content);
+        } else if (adminTab === 'logs') {
+            await loadAdminLogs(content);
+        } else if (adminTab === 'adminTickets') {
+            await loadAdminTickets(content);
         }
     } catch (err) {
         content.innerHTML = err.status === 403
@@ -2940,4 +3001,333 @@ async function disable2FA() {
         showToast('2FA disattivato', 'success');
         load2FASettings();
     } catch (err) { showToast(err.data?.error || 'Codice non valido', 'error'); }
+}
+
+// === Support Tickets ===
+async function loadTickets() {
+    const container = document.getElementById('ticketsContent');
+    container.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const tickets = await api('/tickets/my');
+        if (!tickets || tickets.length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="empty-icon">🎫</div><p>Nessun ticket aperto</p><button class="btn btn-primary" onclick="showCreateTicketForm()">Crea il tuo primo ticket</button></div>';
+            return;
+        }
+        container.innerHTML = tickets.map(t => `
+            <div class="ticket-card ticket-status-${t.status.toLowerCase()}" onclick="navigate('ticketDetail',{id:${t.id}})">
+                <div class="ticket-card-header">
+                    <span class="ticket-id">#${t.id}</span>
+                    <span class="ticket-status-badge">${getTicketStatusIcon(t.status)} ${t.status}</span>
+                </div>
+                <div class="ticket-card-title">${escapeHtml(t.subject)}</div>
+                <div class="ticket-card-meta">
+                    <span>📁 ${escapeHtml(t.category)}</span>
+                    <span>💬 ${t.replyCount} risposte</span>
+                    <span>📅 ${timeAgo(t.createdAt)}</span>
+                </div>
+            </div>
+        `).join('');
+    } catch { container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore caricamento</p></div>'; }
+}
+
+function getTicketStatusIcon(s) {
+    return { Open: '🟢', InProgress: '🟡', Resolved: '✅', Closed: '⚫' }[s] || '❓';
+}
+
+function showCreateTicketForm() {
+    const container = document.getElementById('ticketsContent');
+    container.innerHTML = `
+        <div class="ticket-form">
+            <h3>📝 Nuovo Ticket</h3>
+            <label>Oggetto</label>
+            <input type="text" id="ticketSubject" maxlength="200" placeholder="Descrivi brevemente il problema">
+            <label>Categoria</label>
+            <select id="ticketCategory">
+                <option value="General">Generale</option>
+                <option value="Order">Ordine</option>
+                <option value="Account">Account</option>
+                <option value="Bug">Bug/Problema</option>
+                <option value="Other">Altro</option>
+            </select>
+            <label>Messaggio</label>
+            <textarea id="ticketMessage" rows="5" maxlength="2000" placeholder="Descrivi il problema in dettaglio..."></textarea>
+            <div style="display:flex;gap:0.5rem;margin-top:0.8rem">
+                <button class="btn btn-primary" onclick="submitTicket()">Invia Ticket</button>
+                <button class="btn btn-outline" onclick="loadTickets()">Annulla</button>
+            </div>
+        </div>`;
+}
+
+async function submitTicket() {
+    const subject = document.getElementById('ticketSubject').value.trim();
+    const message = document.getElementById('ticketMessage').value.trim();
+    const category = document.getElementById('ticketCategory').value;
+    if (!subject || !message) return showToast('Compila tutti i campi', 'error');
+    try {
+        await api('/tickets', { method: 'POST', body: JSON.stringify({ subject, message, category }) });
+        showToast('Ticket creato', 'success');
+        loadTickets();
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+async function loadTicketDetail(id) {
+    const container = document.getElementById('ticketDetail');
+    container.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const t = await api(`/tickets/${id}`);
+        let html = `
+            <span style="display:inline-block;margin-bottom:0.8rem;cursor:pointer;color:var(--accent);font-size:13px" onclick="navigate('tickets')">← Torna ai ticket</span>
+            <div class="ticket-detail-header">
+                <h2>${escapeHtml(t.subject)}</h2>
+                <div class="ticket-detail-meta">
+                    <span class="ticket-status-badge">${getTicketStatusIcon(t.status)} ${t.status}</span>
+                    <span>📁 ${escapeHtml(t.category)}</span>
+                    <span>⚡ ${t.priority}</span>
+                    <span>📅 ${timeAgo(t.createdAt)}</span>
+                </div>
+            </div>
+            <div class="ticket-message ticket-original">
+                <div class="ticket-message-author">${escapeHtml(t.username)}</div>
+                <div class="ticket-message-content">${escapeHtml(t.message)}</div>
+                <div class="ticket-message-date">${new Date(t.createdAt).toLocaleString('it-IT')}</div>
+            </div>`;
+
+        if (t.replies && t.replies.length) {
+            html += t.replies.map(r => `
+                <div class="ticket-message ${r.isStaff ? 'ticket-staff-reply' : ''}">
+                    <div class="ticket-message-author">${r.isStaff ? '🛡️ ' : ''}${escapeHtml(r.authorName)}</div>
+                    <div class="ticket-message-content">${escapeHtml(r.message)}</div>
+                    <div class="ticket-message-date">${new Date(r.createdAt).toLocaleString('it-IT')}</div>
+                </div>
+            `).join('');
+        }
+
+        if (t.status !== 'Closed') {
+            html += `
+                <div class="ticket-reply-form">
+                    <textarea id="ticketReplyMsg" rows="3" placeholder="Scrivi una risposta..." maxlength="2000"></textarea>
+                    <div style="display:flex;gap:0.5rem;margin-top:0.5rem">
+                        <button class="btn btn-primary btn-sm" onclick="replyTicket(${id})">Rispondi</button>
+                        <button class="btn btn-outline btn-sm" onclick="closeTicket(${id})">Chiudi Ticket</button>
+                    </div>
+                </div>`;
+        }
+
+        container.innerHTML = html;
+    } catch { container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore</p></div>'; }
+}
+
+async function replyTicket(id) {
+    const msg = document.getElementById('ticketReplyMsg').value.trim();
+    if (!msg) return showToast('Scrivi un messaggio', 'error');
+    try {
+        await api(`/tickets/${id}/reply`, { method: 'POST', body: JSON.stringify({ message: msg }) });
+        showToast('Risposta inviata', 'success');
+        loadTicketDetail(id);
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+async function closeTicket(id) {
+    try {
+        await api(`/tickets/${id}/close`, { method: 'PUT' });
+        showToast('Ticket chiuso', 'success');
+        loadTicketDetail(id);
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+// === Admin Analytics ===
+async function loadAdminAnalytics(container) {
+    const d = await api('/analytics/dashboard');
+    container.innerHTML = `
+        <div class="analytics-dashboard">
+            <div class="analytics-totals">
+                <div class="analytics-card"><div class="analytics-value">${d.totalUsers}</div><div class="analytics-label">👥 Utenti totali</div></div>
+                <div class="analytics-card"><div class="analytics-value">${d.totalThreads}</div><div class="analytics-label">📝 Thread</div></div>
+                <div class="analytics-card"><div class="analytics-value">${d.totalPosts}</div><div class="analytics-label">💬 Post</div></div>
+                <div class="analytics-card"><div class="analytics-value">${d.totalOrders}</div><div class="analytics-label">📦 Ordini</div></div>
+                <div class="analytics-card"><div class="analytics-value">${d.totalRevenue.toFixed(2)}</div><div class="analytics-label">💰 Revenue</div></div>
+                <div class="analytics-card"><div class="analytics-value">${d.openTickets}</div><div class="analytics-label">🎫 Ticket aperti</div></div>
+            </div>
+
+            <div class="analytics-section">
+                <h3>📅 Oggi</h3>
+                <div class="analytics-mini-stats">
+                    <span>👥 +${d.todayUsers} utenti</span>
+                    <span>💬 +${d.todayPosts} post</span>
+                    <span>📦 +${d.todayOrders} ordini</span>
+                </div>
+            </div>
+
+            <div class="analytics-section">
+                <h3>📊 Ultimi 30 giorni — Nuovi utenti</h3>
+                <div class="analytics-chart">
+                    ${renderBarChart(d.dailyUsers)}
+                </div>
+            </div>
+
+            <div class="analytics-section">
+                <h3>💬 Ultimi 30 giorni — Post</h3>
+                <div class="analytics-chart">
+                    ${renderBarChart(d.dailyPosts)}
+                </div>
+            </div>
+
+            <div class="analytics-section">
+                <h3>📦 Ultimi 30 giorni — Ordini</h3>
+                <div class="analytics-chart">
+                    ${renderBarChart(d.dailyOrders)}
+                </div>
+            </div>
+
+            ${d.topVendors?.length ? `<div class="analytics-section">
+                <h3>🏆 Top Venditori</h3>
+                <div class="threads-list">
+                    ${d.topVendors.map((v, i) => `<div class="thread-card"><div class="thread-card-body"><div class="thread-card-title">${i + 1}. ${escapeHtml(v.username)}</div><div class="thread-card-meta"><span>📦 ${v.totalSales} vendite · 💰 ${v.totalRevenue.toFixed(2)}</span></div></div></div>`).join('')}
+                </div>
+            </div>` : ''}
+        </div>`;
+}
+
+function renderBarChart(dataPoints) {
+    if (!dataPoints || !dataPoints.length) return '<p class="text-muted">Nessun dato</p>';
+    const max = Math.max(...dataPoints.map(d => d.count), 1);
+    return `<div class="bar-chart">${dataPoints.map(d => {
+        const pct = (d.count / max * 100);
+        const label = new Date(d.date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' });
+        return `<div class="bar-col" title="${label}: ${d.count}"><div class="bar" style="height:${Math.max(pct, 2)}%"></div><span class="bar-label">${label}</span></div>`;
+    }).join('')}</div>`;
+}
+
+// === Admin Logs ===
+async function loadAdminLogs(container, page = 1) {
+    const result = await api(`/analytics/logs?page=${page}&pageSize=30`);
+    if (!result.logs || result.logs.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">📜</div><p>Nessun log</p></div>';
+        return;
+    }
+    container.innerHTML = `
+        <div class="admin-logs-list">
+            ${result.logs.map(l => `
+                <div class="admin-log-item">
+                    <div class="admin-log-action">${getLogIcon(l.action)} <strong>${escapeHtml(l.action)}</strong></div>
+                    <div class="admin-log-details">${escapeHtml(l.details)}</div>
+                    <div class="admin-log-meta">
+                        <span>👤 ${escapeHtml(l.adminName)}</span>
+                        ${l.targetType ? `<span>🎯 ${escapeHtml(l.targetType)} #${l.targetId || ''}</span>` : ''}
+                        <span>📅 ${new Date(l.createdAt).toLocaleString('it-IT')}</span>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+        ${result.total > 30 ? `<div class="pagination" style="margin-top:1rem">
+            ${page > 1 ? `<button class="btn btn-outline btn-sm" onclick="loadAdminLogs(document.getElementById('adminContent'),${page - 1})">← Prec</button>` : ''}
+            <span>Pagina ${page} di ${Math.ceil(result.total / 30)}</span>
+            ${page * 30 < result.total ? `<button class="btn btn-outline btn-sm" onclick="loadAdminLogs(document.getElementById('adminContent'),${page + 1})">Succ →</button>` : ''}
+        </div>` : ''}`;
+}
+
+function getLogIcon(action) {
+    const icons = { BanUser: '🚫', UnbanUser: '✅', ChangeRole: '🔄', DeleteUser: '🗑️', ModifyCredits: '💰', ReviewListing: '🏪', ResolveDispute: '⚖️', DeleteThread: '📝' };
+    return icons[action] || '📋';
+}
+
+// === Admin Tickets ===
+async function loadAdminTickets(container) {
+    const tickets = await api('/tickets/all');
+    if (!tickets || tickets.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">🎫</div><p>Nessun ticket</p></div>';
+        return;
+    }
+    container.innerHTML = `
+        <div class="admin-tickets-filters" style="margin-bottom:1rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" onclick="filterAdminTickets('')">Tutti (${tickets.length})</button>
+            <button class="btn btn-outline btn-sm" onclick="filterAdminTickets('Open')">🟢 Open</button>
+            <button class="btn btn-outline btn-sm" onclick="filterAdminTickets('InProgress')">🟡 InProgress</button>
+            <button class="btn btn-outline btn-sm" onclick="filterAdminTickets('Resolved')">✅ Resolved</button>
+        </div>
+        <div id="adminTicketsList">
+            ${renderAdminTicketsList(tickets)}
+        </div>`;
+}
+
+function renderAdminTicketsList(tickets) {
+    return tickets.map(t => `
+        <div class="ticket-card ticket-status-${t.status.toLowerCase()}">
+            <div class="ticket-card-header">
+                <span class="ticket-id">#${t.id}</span>
+                <span>👤 ${escapeHtml(t.username)}</span>
+                <span class="ticket-status-badge">${getTicketStatusIcon(t.status)} ${t.status}</span>
+                <span>⚡ ${t.priority}</span>
+            </div>
+            <div class="ticket-card-title">${escapeHtml(t.subject)}</div>
+            <div class="ticket-card-meta">
+                <span>📁 ${escapeHtml(t.category)}</span>
+                <span>📅 ${timeAgo(t.createdAt)}</span>
+            </div>
+            <div class="ticket-admin-actions" style="margin-top:0.5rem;display:flex;gap:0.5rem;flex-wrap:wrap">
+                <select onchange="updateTicketStatus(${t.id},this.value)" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);border-radius:var(--radius-sm);padding:0.2rem 0.4rem;font-size:11px">
+                    <option value="" disabled selected>Stato...</option>
+                    <option value="Open">Open</option>
+                    <option value="InProgress">InProgress</option>
+                    <option value="Resolved">Resolved</option>
+                    <option value="Closed">Closed</option>
+                </select>
+                <select onchange="updateTicketPriority(${t.id},this.value)" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text-primary);border-radius:var(--radius-sm);padding:0.2rem 0.4rem;font-size:11px">
+                    <option value="" disabled selected>Priorità...</option>
+                    <option value="Low">Low</option>
+                    <option value="Normal">Normal</option>
+                    <option value="High">High</option>
+                    <option value="Urgent">Urgent</option>
+                </select>
+                <button class="btn btn-outline btn-sm" style="font-size:11px" onclick="navigate('ticketDetail',{id:${t.id}})">👁️ Apri</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function filterAdminTickets(status) {
+    const url = status ? `/tickets/all?status=${status}` : '/tickets/all';
+    const tickets = await api(url);
+    document.getElementById('adminTicketsList').innerHTML = renderAdminTicketsList(tickets);
+}
+
+async function updateTicketStatus(id, status) {
+    try {
+        await api(`/tickets/${id}/update`, { method: 'PUT', body: JSON.stringify({ status }) });
+        showToast('Stato aggiornato', 'success');
+        loadAdmin();
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+async function updateTicketPriority(id, priority) {
+    try {
+        await api(`/tickets/${id}/update`, { method: 'PUT', body: JSON.stringify({ priority }) });
+        showToast('Priorità aggiornata', 'success');
+        loadAdmin();
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+// === Export Orders CSV ===
+async function exportOrdersCsv() {
+    const activeTab = document.querySelector('.orders-tabs button.active');
+    const type = activeTab && activeTab.textContent.includes('Vendite') ? 'selling' : 'buying';
+    try {
+        const response = await fetch(`/api/export/orders?type=${type}`, {
+            headers: { 'Authorization': `Bearer ${currentUser.token}` }
+        });
+        if (!response.ok) throw new Error('Errore export');
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `orders_${type}_${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Export completato', 'success');
+    } catch { showToast('Errore durante l\'export', 'error'); }
+}
+
+// === Service Worker Registration ===
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js').catch(() => {});
 }

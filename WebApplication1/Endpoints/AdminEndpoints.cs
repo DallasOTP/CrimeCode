@@ -55,8 +55,12 @@ public static class AdminEndpoints
             if (user.Id == currentUserId)
                 return Results.BadRequest(new { error = "Non puoi modificare il tuo stesso ruolo" });
 
+            var oldRole = user.Role;
             user.Role = req.Role;
             await db.SaveChangesAsync();
+
+            var adminId = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            await AnalyticsEndpoints.LogAction(db, adminId, "ChangeRole", $"{user.Username}: {oldRole} → {req.Role}", "User", user.Id);
 
             return Results.Ok(new { user.Id, user.Username, user.Role });
         });
@@ -95,6 +99,8 @@ public static class AdminEndpoints
 
             db.Users.Remove(user);
             await db.SaveChangesAsync();
+
+            await AnalyticsEndpoints.LogAction(db, currentUserId, "DeleteUser", $"Eliminato utente {user.Username} (ID:{user.Id})", "User", user.Id);
 
             return Results.NoContent();
         });
@@ -163,6 +169,9 @@ public static class AdminEndpoints
             db.Threads.Remove(thread);
             await db.SaveChangesAsync();
 
+            var adminIdDel = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            await AnalyticsEndpoints.LogAction(db, adminIdDel, "DeleteThread", $"Eliminato thread \"{thread.Title}\" (ID:{thread.Id})", "Thread", thread.Id);
+
             return Results.NoContent();
         });
 
@@ -198,6 +207,10 @@ public static class AdminEndpoints
             user.IsBanned = true;
             user.BanReason = req.Reason;
             await db.SaveChangesAsync();
+
+            var adminIdBan = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            await AnalyticsEndpoints.LogAction(db, adminIdBan, "BanUser", $"Bannato {user.Username}: {req.Reason}", "User", user.Id);
+
             return Results.Ok(new { user.Id, user.IsBanned });
         });
 
@@ -211,6 +224,10 @@ public static class AdminEndpoints
             user.IsBanned = false;
             user.BanReason = null;
             await db.SaveChangesAsync();
+
+            var adminIdUnban = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            await AnalyticsEndpoints.LogAction(db, adminIdUnban, "UnbanUser", $"Sbannato {user.Username}", "User", user.Id);
+
             return Results.Ok(new { user.Id, user.IsBanned });
         });
 
@@ -227,6 +244,10 @@ public static class AdminEndpoints
                 UserId = id, Amount = req.Amount, Type = "Admin", Reason = req.Reason
             });
             await db.SaveChangesAsync();
+
+            var adminIdCredits = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            await AnalyticsEndpoints.LogAction(db, adminIdCredits, "ModifyCredits", $"{user.Username}: {(req.Amount >= 0 ? "+" : "")}{req.Amount} crediti ({req.Reason})", "User", user.Id);
+
             return Results.Ok(new { user.Id, user.Credits });
         });
 
@@ -265,6 +286,10 @@ public static class AdminEndpoints
             else return Results.BadRequest(new { error = "Status deve essere Approved o Rejected" });
 
             listing.UpdatedAt = DateTime.UtcNow;
+
+            var adminIdReview = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            await AnalyticsEndpoints.LogAction(db, adminIdReview, "ReviewListing", $"Listing \"{listing.Title}\" → {listing.Status}", "Listing", listing.Id);
+
             await db.SaveChangesAsync();
 
             // Notify seller
@@ -344,6 +369,9 @@ public static class AdminEndpoints
                 Type = "dispute_resolved",
                 Message = $"La disputa per l'ordine #{order.Id} è stata risolta: {req.Resolution}"
             });
+
+            var adminIdDispute = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            await AnalyticsEndpoints.LogAction(db, adminIdDispute, "ResolveDispute", $"Ordine #{order.Id} → {req.Resolution}", "Order", order.Id);
 
             await db.SaveChangesAsync();
             return Results.Ok(new { order.Id, order.Status, order.EscrowStatus });

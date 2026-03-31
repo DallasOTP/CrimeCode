@@ -1,9 +1,11 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using CrimeCode.Data;
 using CrimeCode.Endpoints;
 using CrimeCode.Models;
 using CrimeCode.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -12,6 +14,38 @@ var builder = WebApplication.CreateBuilder(args);
 // Database
 builder.Services.AddDbContext<CrimeCodeDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=crimecode.db"));
+
+// CORS
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins(
+            builder.Configuration.GetSection("Cors:Origins").Get<string[]>() 
+            ?? ["https://crimecode-production.up.railway.app"]
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod();
+    });
+});
+
+// Rate Limiting
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = 429;
+    options.AddFixedWindowLimiter("global", opt =>
+    {
+        opt.PermitLimit = 100;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueLimit = 0;
+    });
+    options.AddFixedWindowLimiter("auth", opt =>
+    {
+        opt.PermitLimit = 10;
+        opt.Window = TimeSpan.FromMinutes(5);
+        opt.QueueLimit = 0;
+    });
+});
 
 // Auth
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not configured in appsettings.json");
@@ -123,6 +157,9 @@ using (var scope = app.Services.CreateScope())
 // Serve static files (wwwroot)
 app.UseStaticFiles();
 
+app.UseCors();
+app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -155,6 +192,9 @@ app.MapVoucherEndpoints();
 app.MapWishlistEndpoints();
 app.MapTotpEndpoints();
 app.MapVendorStatsEndpoints();
+app.MapTicketEndpoints();
+app.MapAnalyticsEndpoints();
+app.MapExportEndpoints();
 
 // Fallback to index.html for SPA routing
 app.MapFallbackToFile("index.html");

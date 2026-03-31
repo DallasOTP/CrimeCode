@@ -10,7 +10,8 @@ public record AuthResponse(int UserId, string Username, string Token);
 public record UserProfile(int Id, string Username, string? AvatarUrl, string? Bio, string? Signature, string Role, 
     string? CustomTitle, DateTime CreatedAt, DateTime LastSeenAt, int ThreadCount, int PostCount, 
     int Credits, int ReputationScore, string RankName, string RankColor, string RankIcon,
-    string Status, int FollowerCount, int FollowingCount, bool FollowedByCurrentUser);
+    string Status, int FollowerCount, int FollowingCount, bool FollowedByCurrentUser,
+    string? BannerUrl, string? Website, string? Location, string? Jabber, DateTime? Birthday);
 
 // --- Category ---
 public record CategoryDto(int Id, string Name, string Description, string Icon, int ThreadCount, int? ParentId, bool IsMarketplace, List<CategoryDto>? SubCategories);

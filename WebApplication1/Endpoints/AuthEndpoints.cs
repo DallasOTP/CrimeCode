@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Claims;
 using CrimeCode.Data;
 using CrimeCode.DTOs;
@@ -9,9 +10,14 @@ namespace CrimeCode.Endpoints;
 
 public static class AuthEndpoints
 {
+    // Anti-bruteforce: track failed login attempts per email
+    private static readonly ConcurrentDictionary<string, (int Count, DateTime LastAttempt)> _failedLogins = new();
+    private const int MaxFailedAttempts = 5;
+    private static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+
     public static void MapAuthEndpoints(this WebApplication app)
     {
-        var group = app.MapGroup("/api/auth");
+        var group = app.MapGroup("/api/auth").RequireRateLimiting("auth");
 
         group.MapPost("/register", async (RegisterRequest req, CrimeCodeDbContext db, AuthService auth) =>
         {
@@ -46,9 +52,23 @@ public static class AuthEndpoints
 
         group.MapPost("/login", async (LoginWith2FARequest req, CrimeCodeDbContext db, AuthService auth) =>
         {
+            // Anti-bruteforce check
+            var key = (req.Email ?? "").ToLowerInvariant();
+            if (_failedLogins.TryGetValue(key, out var record) && record.Count >= MaxFailedAttempts 
+                && DateTime.UtcNow - record.LastAttempt < LockoutDuration)
+            {
+                return Results.Json(new { error = "Troppi tentativi falliti. Riprova tra 15 minuti." }, statusCode: 429);
+            }
+
             var user = await db.Users.FirstOrDefaultAsync(u => u.Email == req.Email);
             if (user is null || !BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
+            {
+                // Track failed attempt
+                _failedLogins.AddOrUpdate(key, 
+                    _ => (1, DateTime.UtcNow),
+                    (_, old) => (old.Count + 1, DateTime.UtcNow));
                 return Results.Unauthorized();
+            }
 
             // 2FA check
             if (user.Is2FAEnabled)
@@ -59,6 +79,9 @@ public static class AuthEndpoints
                 if (!TotpEndpoints.VerifyTotp(user.TotpSecret!, req.TotpCode))
                     return Results.Json(new { requires2FA = true, error = "Codice 2FA non valido" }, statusCode: 401);
             }
+
+            // Reset failed attempts on successful login
+            _failedLogins.TryRemove(key, out _);
 
             var token = auth.GenerateToken(user.Id, user.Username, user.Role);
             return Results.Ok(new AuthResponse(user.Id, user.Username, token));
@@ -90,7 +113,8 @@ public static class AuthEndpoints
                 user.Role, user.CustomTitle, user.CreatedAt, user.LastSeenAt,
                 user.Threads.Count, user.Posts.Count, user.Credits, user.ReputationScore,
                 rank.Name, rank.Color, rank.Icon, user.Status,
-                user.Followers.Count, user.Following.Count, false));
+                user.Followers.Count, user.Following.Count, false,
+                user.BannerUrl, user.Website, user.Location, user.Jabber, user.Birthday));
         }).RequireAuthorization();
     }
 }

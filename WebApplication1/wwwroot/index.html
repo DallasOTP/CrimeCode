@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CrimeCode — Underground Market</title>
     <link rel="icon" type="image/png" href="img/logo.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0e17">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="img/logo.png">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -79,6 +84,7 @@
                         <a href="#" onclick="navigate('myOrders')">📋 Ordini</a>
                         <a href="#" onclick="navigate('wallet')">💰 Wallet</a>
                         <a href="#" onclick="navigate('wishlist')">❤️ Wishlist</a>
+                        <a href="#" onclick="navigate('tickets')">🎫 Supporto</a>
                         <a href="#" id="vendorPanelLink" style="display:none" onclick="navigate('myListings')">📦 Vendor Panel</a>
                         <a href="#" id="vendorVouchersLink" style="display:none" onclick="navigate('vouchers')">🎟️ Voucher</a>
                         <a href="#" id="vendorStatsLink" style="display:none" onclick="navigate('vendorStats')">📊 Statistiche</a>
@@ -287,6 +293,20 @@
         <div id="page2FA" style="display:none">
             <h2>🔐 Autenticazione a Due Fattori (2FA)</h2>
             <div id="twofaContent"></div>
+        </div>
+
+        <!-- Support Tickets -->
+        <div id="pageTickets" style="display:none">
+            <div class="page-header-row">
+                <h2>🎫 Supporto</h2>
+                <button class="btn btn-primary" onclick="showCreateTicketForm()">+ Nuovo Ticket</button>
+            </div>
+            <div id="ticketsContent"></div>
+        </div>
+
+        <!-- Ticket Detail -->
+        <div id="pageTicketDetail" style="display:none">
+            <div id="ticketDetail"></div>
         </div>
 
         <!-- Admin -->

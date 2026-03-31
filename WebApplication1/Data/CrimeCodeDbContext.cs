@@ -32,6 +32,9 @@ public class CrimeCodeDbContext : DbContext
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
     public DbSet<Voucher> Vouchers => Set<Voucher>();
     public DbSet<Wishlist> Wishlists => Set<Wishlist>();
+    public DbSet<SupportTicket> SupportTickets => Set<SupportTicket>();
+    public DbSet<TicketReply> TicketReplies => Set<TicketReply>();
+    public DbSet<AdminLog> AdminLogs => Set<AdminLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -296,6 +299,26 @@ public class CrimeCodeDbContext : DbContext
         modelBuilder.Entity<MarketplaceOrder>(e =>
         {
             e.Property(o => o.DiscountAmount).HasColumnType("decimal(18,8)");
+        });
+
+        // SupportTicket
+        modelBuilder.Entity<SupportTicket>(e =>
+        {
+            e.HasOne(t => t.User).WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(t => t.AssignedTo).WithMany().HasForeignKey(t => t.AssignedToId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // TicketReply
+        modelBuilder.Entity<TicketReply>(e =>
+        {
+            e.HasOne(r => r.Ticket).WithMany(t => t.Replies).HasForeignKey(r => r.TicketId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.Author).WithMany().HasForeignKey(r => r.AuthorId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // AdminLog
+        modelBuilder.Entity<AdminLog>(e =>
+        {
+            e.HasOne(l => l.Admin).WithMany().HasForeignKey(l => l.AdminId).OnDelete(DeleteBehavior.Restrict);
         });
 
         // Seed categories (with sections/subsections)
