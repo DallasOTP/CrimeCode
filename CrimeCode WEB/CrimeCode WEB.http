@@ -1,0 +1,6 @@
+@CrimeCode_WEB_HostAddress = http://localhost:5023
+
+GET {{CrimeCode_WEB_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

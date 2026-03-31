@@ -1,0 +1,5 @@
+crimecode.db
+bin/
+obj/
+*.user
+.vs/
