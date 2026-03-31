@@ -6,7 +6,6 @@
     <title>CrimeCode — Underground Market</title>
     <link rel="icon" type="image/png" href="img/logo.png">
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
     <!-- Animated cyber background -->
@@ -302,25 +301,54 @@
             <button class="modal-close" onclick="closeModal()">✕</button>
 
             <div id="modalLogin" style="display:none">
-                <h2>🔐 Accedi a CrimeCode</h2>
+                <div class="auth-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1"/></svg>
+                </div>
+                <h2>Accedi a CrimeCode</h2>
+                <p class="auth-subtitle">Inserisci le tue credenziali per accedere</p>
                 <form onsubmit="login(event)">
-                    <input type="email" id="loginEmail" placeholder="Email" required>
-                    <input type="password" id="loginPassword" placeholder="Password" required>
+                    <div class="input-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" placeholder="nome@email.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" placeholder="La tua password" required>
+                    </div>
+                    <div id="login2FAGroup" style="display:none">
+                        <label for="login2FACode">Codice 2FA</label>
+                        <input type="text" id="login2FACode" placeholder="000000" maxlength="6" autocomplete="one-time-code">
+                    </div>
                     <div class="modal-error" id="loginError"></div>
-                    <button type="submit" class="btn btn-primary btn-full">Accedi</button>
+                    <button type="submit" class="btn btn-primary btn-full btn-glow">Accedi</button>
                 </form>
-                <p class="modal-footer-text">Non hai un account? <a href="#" onclick="showModal('register')">Registrati</a></p>
+                <div class="auth-divider"><span>oppure</span></div>
+                <p class="modal-footer-text">Non hai un account? <a href="#" onclick="showModal('register')">Crea account</a></p>
             </div>
 
             <div id="modalRegister" style="display:none">
-                <h2>🚀 Unisciti a CrimeCode</h2>
+                <div class="auth-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="1.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                </div>
+                <h2>Unisciti a CrimeCode</h2>
+                <p class="auth-subtitle">Crea il tuo account per accedere al marketplace</p>
                 <form onsubmit="register(event)">
-                    <input type="text" id="regUsername" placeholder="Username" required minlength="3">
-                    <input type="email" id="regEmail" placeholder="Email" required>
-                    <input type="password" id="regPassword" placeholder="Password (min 6 caratteri)" required minlength="6">
+                    <div class="input-group">
+                        <label for="regUsername">Username</label>
+                        <input type="text" id="regUsername" placeholder="Scegli un username" required minlength="3">
+                    </div>
+                    <div class="input-group">
+                        <label for="regEmail">Email</label>
+                        <input type="email" id="regEmail" placeholder="nome@email.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="regPassword">Password</label>
+                        <input type="password" id="regPassword" placeholder="Minimo 6 caratteri" required minlength="6">
+                    </div>
                     <div class="modal-error" id="registerError"></div>
-                    <button type="submit" class="btn btn-primary btn-full">Registrati</button>
+                    <button type="submit" class="btn btn-primary btn-full btn-glow">Crea Account</button>
                 </form>
+                <div class="auth-divider"><span>oppure</span></div>
                 <p class="modal-footer-text">Hai già un account? <a href="#" onclick="showModal('login')">Accedi</a></p>
             </div>
 

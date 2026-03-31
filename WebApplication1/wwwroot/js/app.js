@@ -276,7 +276,11 @@ function updateAuthUI() {
 async function register(e) {
     e.preventDefault();
     const errEl = document.getElementById('registerError');
+    const btn = e.target.querySelector('button[type="submit"]');
     errEl.textContent = '';
+    const origText = btn.textContent;
+    btn.textContent = 'Creazione...';
+    btn.disabled = true;
     try {
         const data = await api('/auth/register', {
             method: 'POST',
@@ -290,15 +294,23 @@ async function register(e) {
         localStorage.setItem('crimecode_user', JSON.stringify(data));
         refreshMe();
         closeModal();
+        showToast('Account creato! Benvenuto su CrimeCode', 'success');
     } catch (err) {
-        errEl.textContent = err.data?.error || 'Errore durante la registrazione';
+        errEl.textContent = err.data?.error || 'Errore durante la registrazione. Riprova.';
+    } finally {
+        btn.textContent = origText;
+        btn.disabled = false;
     }
 }
 
 async function login(e) {
     e.preventDefault();
     const errEl = document.getElementById('loginError');
+    const btn = e.target.querySelector('button[type="submit"]');
     errEl.textContent = '';
+    const origText = btn.textContent;
+    btn.textContent = 'Accesso...';
+    btn.disabled = true;
     try {
         const body = {
             email: document.getElementById('loginEmail').value.trim(),
@@ -317,18 +329,14 @@ async function login(e) {
     } catch (err) {
         if (err.data?.requires2FA) {
             errEl.textContent = err.data.error || 'Inserisci il codice 2FA';
-            const existing = document.getElementById('login2FAGroup');
-            if (!existing) {
-                const form = document.querySelector('#loginForm form, #loginModal form') || errEl.parentElement;
-                const grp = document.createElement('div');
-                grp.id = 'login2FAGroup';
-                grp.className = 'form-group';
-                grp.innerHTML = '<label>Codice 2FA</label><input type="text" id="login2FACode" placeholder="123456" maxlength="6" autocomplete="one-time-code">';
-                form.insertBefore(grp, errEl);
-            }
+            const grp = document.getElementById('login2FAGroup');
+            if (grp) grp.style.display = 'block';
         } else {
-            errEl.textContent = 'Email o password non validi';
+            errEl.textContent = err.data?.error || 'Email o password non validi';
         }
+    } finally {
+        btn.textContent = origText;
+        btn.disabled = false;
     }
 }
 
