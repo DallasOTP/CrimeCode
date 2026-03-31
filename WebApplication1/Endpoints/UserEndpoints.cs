@@ -14,47 +14,23 @@ public static class UserEndpoints
         group.MapGet("/{id:int}", async (int id, CrimeCodeDbContext db, ClaimsPrincipal principal) =>
         {
             var user = await db.Users
-                .Include(u => u.Threads)
-                .Include(u => u.Posts)
                 .Include(u => u.Followers)
                 .Include(u => u.Following)
                 .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user is null) return Results.NotFound();
 
-            var ranks = await db.UserRanks.OrderByDescending(r => r.MinPosts).ToListAsync();
-            var rank = LeaderboardEndpoints.GetRank(user, ranks);
-
             var currentUserId = int.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
             var followedByCurrentUser = currentUserId > 0 && user.Followers.Any(f => f.FollowerId == currentUserId);
 
             return Results.Ok(new UserProfile(user.Id, user.Username, user.AvatarUrl, user.Bio, user.Signature,
                 user.Role, user.CustomTitle, user.CreatedAt, user.LastSeenAt,
-                user.Threads.Count, user.Posts.Count, user.Credits, user.ReputationScore,
-                rank.Name, rank.Color, rank.Icon,
+                user.Credits, user.ReputationScore,
                 user.Status ?? "offline", user.Followers.Count, user.Following.Count, followedByCurrentUser,
                 user.BannerUrl, user.Website, user.Location, user.Jabber, user.Birthday));
         });
 
-        group.MapGet("/{id:int}/posts", async (int id, CrimeCodeDbContext db) =>
-        {
-            var posts = await db.Posts
-                .Where(p => p.AuthorId == id)
-                .Include(p => p.Thread)
-                .OrderByDescending(p => p.CreatedAt)
-                .Take(20)
-                .Select(p => new
-                {
-                    p.Id,
-                    p.Content,
-                    p.CreatedAt,
-                    ThreadId = p.Thread.Id,
-                    ThreadTitle = p.Thread.Title
-                })
-                .ToListAsync();
 
-            return Results.Ok(posts);
-        });
 
         // Update bio/signature
         group.MapPut("/{id:int}/profile", async (int id, UpdateProfileRequest req, ClaimsPrincipal principal, CrimeCodeDbContext db) =>

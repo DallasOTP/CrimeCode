@@ -20,10 +20,7 @@ public static class AdminEndpoints
             var p = page ?? 1;
             var ps = Math.Min(pageSize ?? 20, 50);
 
-            var query = db.Users
-                .Include(u => u.Threads)
-                .Include(u => u.Posts)
-                .AsQueryable();
+            var query = db.Users.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
                 query = query.Where(u => u.Username.Contains(search) || u.Email.Contains(search));
@@ -33,7 +30,7 @@ public static class AdminEndpoints
                 .OrderByDescending(u => u.CreatedAt)
                 .Skip((p - 1) * ps)
                 .Take(ps)
-                .Select(u => new AdminUserDto(u.Id, u.Username, u.Email, u.Role, u.CreatedAt, u.Threads.Count, u.Posts.Count, u.Credits, u.ReputationScore, u.IsBanned))
+                .Select(u => new AdminUserDto(u.Id, u.Username, u.Email, u.Role, u.CreatedAt, u.Credits, u.ReputationScore, u.IsBanned))
                 .ToListAsync();
 
             return Results.Ok(new { users, total, page = p, pageSize = ps });
@@ -77,20 +74,7 @@ public static class AdminEndpoints
             var user = await db.Users.FindAsync(id);
             if (user is null) return Results.NotFound();
 
-            // Remove user's likes, posts replies, posts, threads
-            var userPostIds = await db.Posts.Where(p => p.AuthorId == id).Select(p => p.Id).ToListAsync();
-            var likesToRemove = await db.PostLikes.Where(l => l.UserId == id || userPostIds.Contains(l.PostId)).ToListAsync();
-            db.PostLikes.RemoveRange(likesToRemove);
-
-            var repliesToRemove = await db.Posts.Where(p => p.ParentPostId != null && userPostIds.Contains(p.ParentPostId.Value)).ToListAsync();
-            db.Posts.RemoveRange(repliesToRemove);
-
-            var postsToRemove = await db.Posts.Where(p => p.AuthorId == id).ToListAsync();
-            db.Posts.RemoveRange(postsToRemove);
-
-            var threadsToRemove = await db.Threads.Where(t => t.AuthorId == id).ToListAsync();
-            db.Threads.RemoveRange(threadsToRemove);
-
+            // Remove user's related data
             var notificationsToRemove = await db.Notifications.Where(n => n.UserId == id || n.FromUserId == id).ToListAsync();
             db.Notifications.RemoveRange(notificationsToRemove);
 
@@ -105,75 +89,7 @@ public static class AdminEndpoints
             return Results.NoContent();
         });
 
-        // List all threads (admin view)
-        group.MapGet("/threads", async (int? page, int? pageSize, string? search, ClaimsPrincipal principal, CrimeCodeDbContext db) =>
-        {
-            if (!IsAdmin(principal) && !IsModerator(principal)) return Results.Forbid();
 
-            var p = page ?? 1;
-            var ps = Math.Min(pageSize ?? 20, 50);
-
-            var query = db.Threads
-                .Include(t => t.Author)
-                .Include(t => t.Category)
-                .Include(t => t.Posts)
-                .AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(search))
-                query = query.Where(t => t.Title.Contains(search));
-
-            var total = await query.CountAsync();
-            var threads = await query
-                .OrderByDescending(t => t.CreatedAt)
-                .Skip((p - 1) * ps)
-                .Take(ps)
-                .Select(t => new AdminThreadDto(t.Id, t.Title, t.Author.Username, t.Category.Name, t.Posts.Count, t.IsPinned, t.IsLocked, t.CreatedAt))
-                .ToListAsync();
-
-            return Results.Ok(new { threads, total, page = p, pageSize = ps });
-        });
-
-        // Pin/Lock thread
-        group.MapPut("/threads/{id:int}", async (int id, UpdateThreadRequest req, ClaimsPrincipal principal, CrimeCodeDbContext db) =>
-        {
-            if (!IsAdmin(principal) && !IsModerator(principal)) return Results.Forbid();
-
-            var thread = await db.Threads.FindAsync(id);
-            if (thread is null) return Results.NotFound();
-
-            if (req.IsPinned.HasValue) thread.IsPinned = req.IsPinned.Value;
-            if (req.IsLocked.HasValue) thread.IsLocked = req.IsLocked.Value;
-
-            await db.SaveChangesAsync();
-            return Results.Ok(new { thread.Id, thread.IsPinned, thread.IsLocked });
-        });
-
-        // Delete thread
-        group.MapDelete("/threads/{id:int}", async (int id, ClaimsPrincipal principal, CrimeCodeDbContext db) =>
-        {
-            if (!IsAdmin(principal) && !IsModerator(principal)) return Results.Forbid();
-
-            var thread = await db.Threads
-                .Include(t => t.Posts).ThenInclude(p => p.Likes)
-                .Include(t => t.Posts).ThenInclude(p => p.Replies)
-                .FirstOrDefaultAsync(t => t.Id == id);
-
-            if (thread is null) return Results.NotFound();
-
-            foreach (var post in thread.Posts)
-            {
-                db.PostLikes.RemoveRange(post.Likes);
-                db.Posts.RemoveRange(post.Replies);
-            }
-            db.Posts.RemoveRange(thread.Posts);
-            db.Threads.Remove(thread);
-            await db.SaveChangesAsync();
-
-            var adminIdDel = int.Parse(principal.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            await AnalyticsEndpoints.LogAction(db, adminIdDel, "DeleteThread", $"Eliminato thread \"{thread.Title}\" (ID:{thread.Id})", "Thread", thread.Id);
-
-            return Results.NoContent();
-        });
 
         // Stats dashboard
         group.MapGet("/stats", async (ClaimsPrincipal principal, CrimeCodeDbContext db) =>
@@ -185,15 +101,15 @@ public static class AdminEndpoints
             return Results.Ok(new
             {
                 totalUsers = await db.Users.CountAsync(),
-                totalThreads = await db.Threads.CountAsync(),
-                totalPosts = await db.Posts.CountAsync(),
-                totalLikes = await db.PostLikes.CountAsync(),
+                totalListings = await db.MarketplaceListings.CountAsync(),
+                totalOrders = await db.MarketplaceOrders.CountAsync(),
+                totalSales = await db.MarketplaceOrders.CountAsync(o => o.Status == "Completed"),
                 onlineUsers = await db.Users.CountAsync(u => u.LastSeenAt > cutoff),
                 recentUsers = await db.Users.OrderByDescending(u => u.CreatedAt).Take(5)
                     .Select(u => new { u.Id, u.Username, u.CreatedAt }).ToListAsync(),
-                recentThreads = await db.Threads.OrderByDescending(t => t.CreatedAt).Take(5)
-                    .Include(t => t.Author)
-                    .Select(t => new { t.Id, t.Title, Author = t.Author.Username, t.CreatedAt }).ToListAsync()
+                recentListings = await db.MarketplaceListings.OrderByDescending(l => l.CreatedAt).Take(5)
+                    .Include(l => l.Seller)
+                    .Select(l => new { l.Id, l.Title, Seller = l.Seller.Username, l.CreatedAt }).ToListAsync()
             });
         });
 

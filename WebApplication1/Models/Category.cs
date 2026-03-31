@@ -12,6 +12,5 @@ public class Category
     public bool IsMarketplace { get; set; } = false;
 
     public ICollection<Category> SubCategories { get; set; } = [];
-    public ICollection<ForumThread> Threads { get; set; } = [];
     public ICollection<MarketplaceListing> MarketplaceListings { get; set; } = [];
 }

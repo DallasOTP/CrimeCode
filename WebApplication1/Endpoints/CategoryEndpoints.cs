@@ -13,8 +13,7 @@ public static class CategoryEndpoints
         group.MapGet("/", async (CrimeCodeDbContext db) =>
         {
             var allCategories = await db.Categories
-                .Include(c => c.Threads)
-                .Include(c => c.SubCategories).ThenInclude(sc => sc.Threads)
+                .Include(c => c.SubCategories)
                 .OrderBy(c => c.SortOrder)
                 .ToListAsync();
 
@@ -22,11 +21,10 @@ public static class CategoryEndpoints
 
             var result = topLevel.Select(c => new CategoryDto(
                 c.Id, c.Name, c.Description, c.Icon,
-                c.Threads.Count + c.SubCategories.Sum(sc => sc.Threads.Count),
                 c.ParentId, c.IsMarketplace,
                 c.SubCategories.OrderBy(sc => sc.SortOrder).Select(sc => new CategoryDto(
                     sc.Id, sc.Name, sc.Description, sc.Icon,
-                    sc.Threads.Count, sc.ParentId, sc.IsMarketplace, null
+                    sc.ParentId, sc.IsMarketplace, null
                 )).ToList()
             )).ToList();
 

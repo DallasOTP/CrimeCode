@@ -94,8 +94,6 @@ public static class AuthEndpoints
                 return Results.Unauthorized();
 
             var user = await db.Users
-                .Include(u => u.Threads)
-                .Include(u => u.Posts)
                 .Include(u => u.Followers)
                 .Include(u => u.Following)
                 .FirstOrDefaultAsync(u => u.Id == userId);
@@ -106,13 +104,9 @@ public static class AuthEndpoints
             user.LastSeenAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
 
-            var ranks = await db.UserRanks.OrderByDescending(r => r.MinPosts).ToListAsync();
-            var rank = LeaderboardEndpoints.GetRank(user, ranks);
-
             return Results.Ok(new UserProfile(user.Id, user.Username, user.AvatarUrl, user.Bio, user.Signature,
                 user.Role, user.CustomTitle, user.CreatedAt, user.LastSeenAt,
-                user.Threads.Count, user.Posts.Count, user.Credits, user.ReputationScore,
-                rank.Name, rank.Color, rank.Icon, user.Status,
+                user.Credits, user.ReputationScore, user.Status,
                 user.Followers.Count, user.Following.Count, false,
                 user.BannerUrl, user.Website, user.Location, user.Jabber, user.Birthday));
         }).RequireAuthorization();

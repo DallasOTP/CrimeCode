@@ -34,10 +34,6 @@ public class User
     public string? TotpSecret { get; set; }
     public bool Is2FAEnabled { get; set; } = false;
 
-    public ICollection<ForumThread> Threads { get; set; } = [];
-    public ICollection<Post> Posts { get; set; } = [];
-    public ICollection<PostLike> Likes { get; set; } = [];
-    public ICollection<PostReaction> Reactions { get; set; } = [];
     public ICollection<Notification> Notifications { get; set; } = [];
     public ICollection<PrivateMessage> SentMessages { get; set; } = [];
     public ICollection<PrivateMessage> ReceivedMessages { get; set; } = [];
@@ -45,10 +41,8 @@ public class User
     public ICollection<Reputation> ReputationReceived { get; set; } = [];
     public ICollection<CreditTransaction> CreditTransactions { get; set; } = [];
     public ICollection<MarketplaceListing> MarketplaceListings { get; set; } = [];
-    public ICollection<ShoutboxMessage> ShoutboxMessages { get; set; } = [];
     public ICollection<UserFollow> Followers { get; set; } = [];
     public ICollection<UserFollow> Following { get; set; } = [];
-    public ICollection<PostAttachment> Attachments { get; set; } = [];
     public ICollection<ChatMessage> SentChats { get; set; } = [];
     public ICollection<ChatMessage> ReceivedChats { get; set; } = [];
     public ICollection<MarketplaceOrder> BuyerOrders { get; set; } = [];

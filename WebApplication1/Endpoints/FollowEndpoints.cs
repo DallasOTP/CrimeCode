@@ -53,39 +53,27 @@ public static class FollowEndpoints
         // Get followers
         group.MapGet("/followers", async (int userId, CrimeCodeDbContext db) =>
         {
-            var ranks = await db.UserRanks.OrderByDescending(r => r.MinPosts).ToListAsync();
             var followers = await db.UserFollows
                 .Where(f => f.FollowingId == userId)
-                .Include(f => f.Follower).ThenInclude(u => u.Posts)
+                .Include(f => f.Follower)
                 .OrderByDescending(f => f.CreatedAt)
+                .Select(f => new FollowDto(f.Follower.Id, f.Follower.Username, f.Follower.AvatarUrl, f.CreatedAt))
                 .ToListAsync();
 
-            var result = followers.Select(f =>
-            {
-                var rank = LeaderboardEndpoints.GetRank(f.Follower, ranks);
-                return new FollowDto(f.Follower.Id, f.Follower.Username, f.Follower.AvatarUrl, rank.Name, rank.Color, f.CreatedAt);
-            }).ToList();
-
-            return Results.Ok(result);
+            return Results.Ok(followers);
         });
 
         // Get following
         group.MapGet("/following", async (int userId, CrimeCodeDbContext db) =>
         {
-            var ranks = await db.UserRanks.OrderByDescending(r => r.MinPosts).ToListAsync();
             var following = await db.UserFollows
                 .Where(f => f.FollowerId == userId)
-                .Include(f => f.Following).ThenInclude(u => u.Posts)
+                .Include(f => f.Following)
                 .OrderByDescending(f => f.CreatedAt)
+                .Select(f => new FollowDto(f.Following.Id, f.Following.Username, f.Following.AvatarUrl, f.CreatedAt))
                 .ToListAsync();
 
-            var result = following.Select(f =>
-            {
-                var rank = LeaderboardEndpoints.GetRank(f.Following, ranks);
-                return new FollowDto(f.Following.Id, f.Following.Username, f.Following.AvatarUrl, rank.Name, rank.Color, f.CreatedAt);
-            }).ToList();
-
-            return Results.Ok(result);
+            return Results.Ok(following);
         });
     }
 }

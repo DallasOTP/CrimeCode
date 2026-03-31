@@ -1,13 +1,10 @@
-// === CrimeCode Forum — Frontend Application (craxpro.to style) ===
+// === CrimeCode Market — Frontend Application ===
 
 const API = '/api';
 let currentUser = null;
 let currentPage = 1;
-let currentCategory = null;
 let badgeInterval = null;
 let heartbeatInterval = null;
-let shoutboxInterval = null;
-let cachedTags = null;
 
 // === Init ===
 document.addEventListener('DOMContentLoaded', () => {
@@ -26,8 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
         telegramAutoLogin();
     }
     updateAuthUI();
-    loadShoutbox();
-    loadForumStats();
+    loadMarketplaceStats();
     navigate('marketplace');
 });
 
@@ -119,17 +115,6 @@ function navigate(page, params = {}) {
     if (navLink) navLink.classList.add('active');
 
     switch (page) {
-        case 'home':
-            document.getElementById('pageHome').style.display = '';
-            loadHome();
-            break;
-        case 'thread':
-            document.getElementById('pageThread').style.display = '';
-            loadThread(params.id);
-            break;
-        case 'search':
-            document.getElementById('pageSearch').style.display = '';
-            break;
         case 'profile':
             document.getElementById('pageProfile').style.display = '';
             loadProfile(params.id);
@@ -173,7 +158,7 @@ function navigate(page, params = {}) {
             break;
         case 'leaderboard':
             document.getElementById('pageLeaderboard').style.display = '';
-            loadLeaderboard('reputation');
+            loadLeaderboard('rating');
             break;
         case 'members':
             document.getElementById('pageMembers').style.display = '';
@@ -249,9 +234,6 @@ function updateAuthUI() {
             const adminLink = document.getElementById('adminLink');
             if (adminLink) adminLink.style.display = (role === 'Admin' || role === 'Moderator') ? '' : 'none';
         } catch { /* ignore */ }
-        // Show shoutbox input  
-        const sbInput = document.getElementById('shoutboxInput');
-        if (sbInput) sbInput.style.display = 'flex';
         // Show marketplace buttons based on vendor status
         const nlb = document.getElementById('newListingBtn');
         const vendorApplyBtn = document.getElementById('vendorApplyBtn');
@@ -275,8 +257,6 @@ function updateAuthUI() {
     } else {
         nav.style.display = 'flex';
         navLogged.style.display = 'none';
-        const sbInput = document.getElementById('shoutboxInput');
-        if (sbInput) sbInput.style.display = 'none';
         const nlb = document.getElementById('newListingBtn');
         if (nlb) nlb.style.display = 'none';
         const vendorApplyBtn = document.getElementById('vendorApplyBtn');
@@ -341,7 +321,7 @@ async function login(e) {
         localStorage.setItem('crimecode_user', JSON.stringify(data));
         refreshMe();
         closeModal();
-        loadHome();
+        navigate('marketplace');
     } catch (err) {
         if (err.data?.requires2FA) {
             errEl.textContent = err.data.error || 'Inserisci il codice 2FA';
@@ -362,7 +342,7 @@ function logout() {
     updateAuthUI();
     stopBadgePolling();
     stopHeartbeat();
-    navigate('home');
+    navigate('marketplace');
 }
 
 // === User Menu ===
@@ -426,21 +406,15 @@ function stopHeartbeat() {
 }
 
 // === Forum Stats ===
-async function loadForumStats() {
+async function loadMarketplaceStats() {
     try {
         const s = await api('/leaderboard/stats');
-        const bar = document.getElementById('forumStatsBar');
-        if (bar) bar.textContent = `${s.totalUsers} utenti · ${s.totalThreads} thread · ${s.totalPosts} post`;
+        const bar = document.getElementById('marketStatsBar');
+        if (bar) bar.textContent = `${s.totalUsers} utenti · ${s.totalListings} annunci · ${s.totalSales} vendite`;
         const oc = document.getElementById('onlineCount');
         if (oc) oc.textContent = `${s.onlineUsers} online`;
-        const hs = document.getElementById('heroStats');
-        if (hs) hs.innerHTML = `
-            <div class="hero-stat"><span class="hero-stat-value">${s.totalUsers}</span><span class="hero-stat-label">Utenti</span></div>
-            <div class="hero-stat"><span class="hero-stat-value">${s.totalThreads}</span><span class="hero-stat-label">Thread</span></div>
-            <div class="hero-stat"><span class="hero-stat-value">${s.totalPosts}</span><span class="hero-stat-label">Post</span></div>
-            <div class="hero-stat"><span class="hero-stat-value">${s.onlineUsers}</span><span class="hero-stat-label">Online</span></div>`;
         const fs = document.getElementById('footerStats');
-        if (fs) fs.textContent = `${s.totalUsers} utenti · ${s.totalThreads} thread · ${s.totalPosts} post · ${s.onlineUsers} online`;
+        if (fs) fs.textContent = `${s.totalUsers} utenti · ${s.totalListings} annunci · ${s.totalSales} vendite · ${s.onlineUsers} online`;
     } catch { /* ignore */ }
 }
 
@@ -451,7 +425,7 @@ function showModal(type, params = {}) {
         if (d.id !== 'modalOverlay') d.style.display = 'none';
     });
     const map = {
-        login: 'modalLogin', register: 'modalRegister', newThread: 'modalNewThread',
+        login: 'modalLogin', register: 'modalRegister',
         sendMessage: 'modalSendMessage', avatar: 'modalAvatar',
         newListing: 'modalNewListing', reputation: 'modalReputation',
         vendorApply: 'modalVendorApply', orderCreate: 'modalOrderCreate',
@@ -461,7 +435,6 @@ function showModal(type, params = {}) {
     if (el) el.style.display = '';
     overlay.classList.add('active');
 
-    if (type === 'newThread') { loadCategoriesSelect('threadCategory', false); loadTagsSelect(); }
     if (type === 'newListing') loadCategoriesSelect('listingCategory', true);
     if (type === 'sendMessage' && params.userId && params.username) {
         document.getElementById('msgReceiverId').value = params.userId;
@@ -501,335 +474,9 @@ async function loadCategoriesSelect(selectId, marketplaceOnly) {
     } catch { /* ignore */ }
 }
 
-// === Load Tags Select ===
-async function loadTagsSelect() {
-    const sel = document.getElementById('threadTag');
-    try {
-        if (!cachedTags) cachedTags = await api('/leaderboard/tags');
-        sel.innerHTML = '<option value="">— Tag (opzionale) —</option>' +
-            cachedTags.map(t => `<option value="${t.id}" style="color:${t.color}">${t.name}</option>`).join('');
-    } catch { /* ignore */ }
-}
+// === Shoutbox (REMOVED) ===
 
-// === Shoutbox ===
-async function loadShoutbox() {
-    try {
-        const msgs = await api('/shoutbox');
-        const container = document.getElementById('shoutboxMessages');
-        if (msgs.length === 0) {
-            container.innerHTML = '<div style="padding:0.5rem;color:var(--text-muted);font-size:12px">Nessun messaggio nella shoutbox</div>';
-        } else {
-            container.innerHTML = msgs.map(m => {
-                const del = currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Moderator')
-                    ? `<span class="sb-delete" onclick="deleteShoutbox(${m.id})">✕</span>` : '';
-                return `<div class="shoutbox-msg">
-                    <span class="sb-author" onclick="navigate('profile',{id:${m.authorId}})">${escapeHtml(m.authorName)}</span>: 
-                    ${escapeHtml(m.content)} 
-                    <span class="sb-time">${timeAgo(m.createdAt)}</span>${del}
-                </div>`;
-            }).join('');
-            container.scrollTop = container.scrollHeight;
-        }
-    } catch { /* ignore */ }
-    // Poll shoutbox
-    if (!shoutboxInterval) shoutboxInterval = setInterval(loadShoutbox, 15000);
-}
-
-function toggleShoutbox() {
-    const body = document.getElementById('shoutboxBody');
-    body.classList.toggle('collapsed');
-    const btn = body.closest('.shoutbox').querySelector('.shoutbox-toggle');
-    btn.textContent = body.classList.contains('collapsed') ? '+' : '−';
-}
-
-async function sendShoutbox() {
-    const input = document.getElementById('shoutboxText');
-    const content = input.value.trim();
-    if (!content) return;
-    try {
-        await api('/shoutbox', { method: 'POST', body: JSON.stringify({ content }) });
-        input.value = '';
-        loadShoutbox();
-    } catch (err) {
-        alert(err.data?.error || 'Errore');
-    }
-}
-
-async function deleteShoutbox(id) {
-    try {
-        await api(`/shoutbox/${id}`, { method: 'DELETE' });
-        loadShoutbox();
-    } catch { /* ignore */ }
-}
-
-// === Home ===
-async function loadHome() {
-    loadCategories();
-    loadThreads();
-    loadForumStats();
-}
-
-// === Categories (Hierarchical) ===
-async function loadCategories() {
-    const grid = document.getElementById('categoriesGrid');
-    grid.innerHTML = '<div class="loading">Caricamento</div>';
-    try {
-        const cats = await api('/categories');
-        // Filter only top-level categories (no parentId)
-        const topLevel = cats.filter(c => !c.parentId);
-        if (topLevel.length === 0) {
-            grid.innerHTML = '<div class="empty-state"><div class="empty-icon">📂</div><p>Nessuna categoria</p></div>';
-            return;
-        }
-        grid.innerHTML = topLevel.map(c => {
-            const subs = c.subCategories || [];
-            return `<div class="forum-category">
-                <div class="forum-category-header" onclick="filterByCategory(${c.id})">
-                    <span class="cat-icon">${escapeHtml(c.icon)}</span>
-                    <span class="cat-name">${escapeHtml(c.name)}</span>
-                    <span class="cat-desc">${escapeHtml(c.description)}</span>
-                </div>
-                ${subs.length ? `<div class="forum-subcategories">
-                    ${subs.map(s => `<div class="forum-subcategory" onclick="filterByCategory(${s.id})">
-                        <span class="sub-name">${escapeHtml(s.icon)} ${escapeHtml(s.name)}</span>
-                        <span class="sub-stats">${s.threadCount} thread</span>
-                    </div>`).join('')}
-                </div>` : ''}
-            </div>`;
-        }).join('');
-        // Build category filter buttons
-        const filtersContainer = document.getElementById('categoryFilters');
-        if (filtersContainer) {
-            filtersContainer.innerHTML = cats.map(c => 
-                `<button class="filter-btn" onclick="currentCategory=${c.id};currentPage=1;loadThreads();setActiveFilter(this)">${escapeHtml(c.icon)} ${escapeHtml(c.name)}</button>`
-            ).join('');
-        }
-    } catch {
-        grid.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore nel caricamento</p></div>';
-    }
-}
-
-function setActiveFilter(btn) {
-    document.querySelectorAll('.section-filters .filter-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-}
-
-function filterByCategory(id) {
-    currentCategory = id;
-    currentPage = 1;
-    loadThreads();
-}
-
-// === Threads ===
-async function loadThreads() {
-    const list = document.getElementById('threadsList');
-    list.innerHTML = '<div class="loading">Caricamento</div>';
-    try {
-        const params = new URLSearchParams({ page: currentPage, pageSize: 15 });
-        if (currentCategory) params.set('categoryId', currentCategory);
-        const result = await api(`/threads?${params}`);
-
-        if (result.threads.length === 0) {
-            list.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><p>Nessun thread trovato</p></div>';
-        } else {
-            list.innerHTML = result.threads.map(t => threadCard(t)).join('');
-        }
-        renderPagination(result.total, result.page, result.pageSize);
-    } catch {
-        list.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore nel caricamento</p></div>';
-    }
-}
-
-function threadCard(t) {
-    const pinIcon = t.isPinned ? '📌 ' : '';
-    const lockIcon = t.isLocked ? '🔒 ' : '';
-    const avatarHtml = t.authorAvatarUrl 
-        ? `<img src="${escapeHtml(t.authorAvatarUrl)}" alt="">` 
-        : (t.authorName || '?').charAt(0).toUpperCase();
-    const tagHtml = t.tagName 
-        ? `<span class="thread-tag" style="background:${t.tagColor || '#333'};color:#fff">${escapeHtml(t.tagName)}</span>` : '';
-    const prefixHtml = t.prefix ? `<span class="thread-prefix">${escapeHtml(t.prefix)}</span>` : '';
-    const lastPost = t.lastPostAuthor 
-        ? `<span class="last-post">Ultimo: ${escapeHtml(t.lastPostAuthor)} · ${timeAgo(t.lastPostAt)}</span>` : '';
-
-    return `<div class="thread-card" onclick="navigate('thread',{id:${t.id}})">
-        <div class="thread-card-avatar">${avatarHtml}</div>
-        <div class="thread-card-body">
-            <div class="thread-card-top">
-                ${tagHtml}${prefixHtml}
-            </div>
-            <div class="thread-card-title">${pinIcon}${lockIcon}${escapeHtml(t.title)}</div>
-            <div class="thread-card-meta">
-                <span class="author">${escapeHtml(t.authorName)}</span>
-                <span class="category-badge">${escapeHtml(t.categoryName)}</span>
-                <span>${timeAgo(t.createdAt)}</span>
-            </div>
-        </div>
-        <div class="thread-card-stats">
-            <span class="stat-row">💬 ${t.postCount} · 👁 ${t.viewCount}</span>
-            ${lastPost}
-        </div>
-    </div>`;
-}
-
-function renderPagination(total, page, pageSize) {
-    const pag = document.getElementById('pagination');
-    const totalPages = Math.ceil(total / pageSize);
-    if (totalPages <= 1) { pag.innerHTML = ''; return; }
-    let html = '';
-    if (page > 1) html += `<button onclick="goToPage(${page-1})">←</button>`;
-    for (let i = 1; i <= totalPages; i++) {
-        if (totalPages > 7 && Math.abs(i - page) > 2 && i !== 1 && i !== totalPages) {
-            if (i === 2 || i === totalPages - 1) html += `<button disabled>...</button>`;
-            continue;
-        }
-        html += `<button class="${i === page ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
-    }
-    if (page < totalPages) html += `<button onclick="goToPage(${page+1})">→</button>`;
-    pag.innerHTML = html;
-}
-function goToPage(page) { currentPage = page; loadThreads(); }
-
-// === Thread Detail ===
-async function loadThread(id) {
-    const container = document.getElementById('threadDetail');
-    container.innerHTML = '<div class="loading">Caricamento</div>';
-    try {
-        const t = await api(`/threads/${id}`);
-        const tagHtml = t.tagName ? `<span class="thread-tag" style="background:${t.tagColor||'#333'};color:#fff">${escapeHtml(t.tagName)}</span> ` : '';
-        const prefixHtml = t.prefix ? `<span class="thread-prefix">${escapeHtml(t.prefix)}</span> ` : '';
-
-        let html = `
-            <span class="thread-back" style="display:inline-block;margin-bottom:0.8rem;cursor:pointer;color:var(--accent);font-size:13px" onclick="navigate('home')">← Torna al forum</span>
-            <div class="thread-header">
-                <h1>${tagHtml}${prefixHtml}${escapeHtml(t.title)}</h1>
-                <div class="thread-header-meta">
-                    <span>di <a href="#" onclick="event.preventDefault();navigate('profile',{id:${t.authorId}})">${escapeHtml(t.authorName)}</a></span>
-                    <span>in ${escapeHtml(t.categoryName)}</span>
-                    <span>${timeAgo(t.createdAt)}</span>
-                    <span>👁 ${t.viewCount} visualizzazioni</span>
-                    ${t.isPinned ? '<span>📌 Pinnato</span>' : ''}
-                    ${t.isLocked ? '<span>🔒 Chiuso</span>' : ''}
-                </div>
-            </div>`;
-
-        html += t.posts.map(p => renderPost(p, id)).join('');
-
-        if (!t.isLocked && currentUser) {
-            html += `<div class="reply-box">
-                <h3>💬 Rispondi</h3>
-                <textarea id="replyContent" placeholder="Scrivi la tua risposta..."></textarea>
-                <button class="btn btn-primary" onclick="submitReply(${id})">Invia risposta</button>
-            </div>`;
-        } else if (t.isLocked) {
-            html += '<div class="empty-state"><p>🔒 Questo thread è chiuso</p></div>';
-        } else {
-            html += '<div class="empty-state"><p><a href="#" onclick="showModal(\'login\')">Accedi</a> per rispondere</p></div>';
-        }
-
-        container.innerHTML = html;
-    } catch {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Thread non trovato</p></div>';
-    }
-}
-
-function renderPost(p, threadId) {
-    const avatarHtml = p.authorAvatarUrl
-        ? `<img src="${escapeHtml(p.authorAvatarUrl)}" alt="">`
-        : p.authorName.charAt(0).toUpperCase();
-    const likeClass = p.likedByCurrentUser ? ' liked' : '';
-    const edited = p.editedAt ? ' (modificato)' : '';
-    const canEdit = currentUser && currentUser.userId === p.authorId;
-    const roleClass = p.authorRole === 'Admin' ? 'admin' : (p.authorRole === 'Moderator' ? 'moderator' : '');
-
-    let authorHtml = `<div class="post-author">
-        <div class="post-author-avatar">${avatarHtml}</div>
-        <span class="post-author-name" onclick="navigate('profile',{id:${p.authorId}})">${escapeHtml(p.authorName)}</span>`;
-    
-    if (p.rankName) {
-        authorHtml += `<span class="post-author-rank" style="background:${p.rankColor || '#333'};color:#fff">${p.rankIcon || ''} ${escapeHtml(p.rankName)}</span>`;
-    }
-    if (roleClass) {
-        authorHtml += `<span class="post-author-role ${roleClass}">${escapeHtml(p.authorRole)}</span>`;
-    }
-    authorHtml += `<div class="post-author-stats">
-        <span>📝 ${p.authorPostCount} post</span>
-        <span>⭐ ${p.authorReputation} rep</span>
-        <span>📅 ${new Date(p.authorJoinDate).toLocaleDateString('it-IT')}</span>
-    </div>`;
-    if (p.authorSignature) {
-        authorHtml += `<div class="post-author-signature">${escapeHtml(p.authorSignature)}</div>`;
-    }
-    authorHtml += '</div>';
-
-    let actionsHtml = `<button class="${likeClass}" onclick="event.stopPropagation();toggleLike(${threadId},${p.id},this)">❤️ ${p.likeCount}</button>`;
-    if (currentUser) {
-        actionsHtml += `<button onclick="event.stopPropagation();quotePost(${p.id},'${escapeHtml(p.authorName).replace(/'/g, "\\'")}',\`${escapeHtml(p.content).replace(/`/g, '\\`').replace(/\\/g, '\\\\')}\`)" title="Cita">💬 Cita</button>`;
-        actionsHtml += `<button onclick="event.stopPropagation();showReplyBox(${threadId},${p.id})">↩️ Rispondi</button>`;
-        if (currentUser.userId !== p.authorId) {
-            actionsHtml += `<button onclick="event.stopPropagation();showModal('reputation',{userId:${p.authorId},username:'${escapeHtml(p.authorName).replace(/'/g, "\\'")}'})">⭐ Rep</button>`;
-        }
-    }
-    if (canEdit) {
-        actionsHtml += `<button onclick="event.stopPropagation();deletePost(${threadId},${p.id})">🗑️</button>`;
-    }
-
-    // Reactions bar
-    let reactionsHtml = '';
-    if (p.reactions && Object.keys(p.reactions).length > 0) {
-        reactionsHtml = '<div class="post-reactions">';
-        for (const [emoji, count] of Object.entries(p.reactions)) {
-            const active = p.currentUserReactions && p.currentUserReactions.includes(emoji) ? ' active' : '';
-            reactionsHtml += `<button class="reaction-btn${active}" onclick="event.stopPropagation();toggleReaction(${p.id},'${emoji}',${threadId})">${emoji} <span>${count}</span></button>`;
-        }
-        reactionsHtml += '</div>';
-    }
-
-    // Add reaction button
-    let addReactionHtml = '';
-    if (currentUser) {
-        addReactionHtml = `<div class="add-reaction-wrap"><button class="add-reaction-btn" onclick="event.stopPropagation();toggleReactionPicker(${p.id},${threadId})">😀+</button>
-            <div class="reaction-picker" id="reactionPicker-${p.id}" style="display:none">
-                ${['👍','👎','❤️','😂','😮','😢','🔥','💀','🤔','👀','🎯','💯','⚡','🚀','💎'].map(e => `<button onclick="event.stopPropagation();toggleReaction(${p.id},'${e}',${threadId})">${e}</button>`).join('')}
-            </div>
-        </div>`;
-    }
-
-    // Attachments
-    let attachmentsHtml = '';
-    if (p.attachments && p.attachments.length > 0) {
-        attachmentsHtml = '<div class="post-attachments"><span class="attachments-label">📎 Allegati:</span>';
-        for (const att of p.attachments) {
-            if (att.contentType && att.contentType.startsWith('image/')) {
-                attachmentsHtml += `<div class="attachment-item attachment-image"><img src="${escapeHtml(att.url)}" alt="${escapeHtml(att.fileName)}" loading="lazy" onclick="window.open('${escapeHtml(att.url)}','_blank')"><span class="attachment-name">${escapeHtml(att.fileName)}</span></div>`;
-            } else {
-                attachmentsHtml += `<div class="attachment-item"><a href="${escapeHtml(att.url)}" target="_blank" rel="noopener noreferrer">📄 ${escapeHtml(att.fileName)}</a> <span class="attachment-size">(${formatFileSize(att.fileSizeBytes)})</span></div>`;
-            }
-        }
-        attachmentsHtml += '</div>';
-    }
-
-    let html = `<div class="post fade-in" id="post-${p.id}">
-        ${authorHtml}
-        <div class="post-content-area">
-            <div class="post-header">
-                <span>${timeAgo(p.createdAt)}${edited}</span>
-                <div class="post-actions">${actionsHtml}</div>
-            </div>
-            <div class="post-body">${formatContent(p.content)}</div>
-            ${attachmentsHtml}
-            <div class="post-footer-bar">${reactionsHtml}${addReactionHtml}</div>
-            <div id="replyBox-${p.id}"></div>
-        </div>
-    </div>`;
-
-    if (p.replies && p.replies.length > 0) {
-        html += '<div style="margin-left:1.5rem">';
-        html += p.replies.map(r => renderPost(r, threadId)).join('');
-        html += '</div>';
-    }
-    return html;
-}
+// === Forum (REMOVED — Marketplace only) ===
 
 function formatContent(text) {
     if (!text) return '';
@@ -866,171 +513,13 @@ function formatContent(text) {
     return s;
 }
 
-function showReplyBox(threadId, parentId) {
-    const box = document.getElementById(`replyBox-${parentId}`);
-    if (box.innerHTML) { box.innerHTML = ''; return; }
-    box.innerHTML = `<div class="reply-box" style="margin-top:0.5rem">
-        <textarea id="inlineReply-${parentId}" placeholder="Rispondi..." rows="3"></textarea>
-        <button class="btn btn-primary btn-sm" onclick="submitInlineReply(${threadId},${parentId})">Invia</button>
-    </div>`;
-}
-
-async function submitReply(threadId) {
-    const content = document.getElementById('replyContent').value.trim();
-    if (!content) return;
-    try {
-        await api(`/threads/${threadId}/posts`, {
-            method: 'POST',
-            body: JSON.stringify({ content, parentPostId: null })
-        });
-        loadThread(threadId);
-    } catch (err) { alert(err.data?.error || 'Errore'); }
-}
-
-async function submitInlineReply(threadId, parentId) {
-    const content = document.getElementById(`inlineReply-${parentId}`).value.trim();
-    if (!content) return;
-    try {
-        await api(`/threads/${threadId}/posts`, {
-            method: 'POST',
-            body: JSON.stringify({ content, parentPostId: parentId })
-        });
-        loadThread(threadId);
-    } catch (err) { alert(err.data?.error || 'Errore'); }
-}
-
-async function toggleLike(threadId, postId, btn) {
-    if (!currentUser) { showModal('login'); return; }
-    try {
-        await api(`/threads/${threadId}/posts/${postId}/like`, { method: 'POST' });
-        loadThread(threadId);
-    } catch { /* ignore */ }
-}
-
-async function deletePost(threadId, postId) {
-    if (!confirm('Eliminare questo post?')) return;
-    try {
-        await api(`/threads/${threadId}/posts/${postId}`, { method: 'DELETE' });
-        loadThread(threadId);
-    } catch (err) { alert(err.data?.error || 'Errore'); }
-}
-
-// === Create Thread ===
-async function createThread(e) {
-    e.preventDefault();
-    const errEl = document.getElementById('threadError');
-    errEl.textContent = '';
-    const tagId = document.getElementById('threadTag').value;
-    try {
-        const res = await api('/threads', {
-            method: 'POST',
-            body: JSON.stringify({
-                title: document.getElementById('threadTitle').value.trim(),
-                content: document.getElementById('threadContent').value.trim(),
-                categoryId: parseInt(document.getElementById('threadCategory').value),
-                tagId: tagId ? parseInt(tagId) : null,
-                prefix: null
-            })
-        });
-        closeModal();
-        navigate('thread', { id: res.id });
-    } catch (err) {
-        errEl.textContent = err.data?.error || 'Errore nella creazione';
-    }
-}
-
-// === Search ===
-async function searchThreads() {
+// === Search Marketplace ===
+async function searchMarketplace() {
     const q = document.getElementById('searchInput').value.trim();
     if (!q || q.length < 2) return;
-    navigate('search');
-    loadSearchCategories();
-    const container = document.getElementById('searchResults');
-    container.innerHTML = '<div class="loading">Ricerca</div>';
-    try {
-        const res = await api('/search/advanced', {
-            method: 'POST',
-            body: JSON.stringify({ query: q, page: 1, pageSize: 20 })
-        });
-        if (!res.threads || res.threads.length === 0) {
-            container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><p>Nessun risultato</p></div>';
-        } else {
-            container.innerHTML = res.threads.map(t => threadCard(t)).join('');
-        }
-        renderSearchPagination(res.total, res.page, res.pageSize, q);
-    } catch {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore nella ricerca</p></div>';
-    }
-}
-
-let searchCurrentPage = 1;
-
-async function advancedSearch(page = 1) {
-    const q = document.getElementById('searchInput').value.trim();
-    const categoryId = document.getElementById('searchCategory').value || null;
-    const tagId = document.getElementById('searchTag').value || null;
-    const dateFrom = document.getElementById('searchDateFrom').value || null;
-    const dateTo = document.getElementById('searchDateTo').value || null;
-    
-    const container = document.getElementById('searchResults');
-    container.innerHTML = '<div class="loading">Ricerca avanzata...</div>';
-    try {
-        const res = await api('/search/advanced', {
-            method: 'POST',
-            body: JSON.stringify({ query: q || null, categoryId: categoryId ? parseInt(categoryId) : null, tagId: tagId ? parseInt(tagId) : null, dateFrom, dateTo, page, pageSize: 20 })
-        });
-        if (!res.threads || res.threads.length === 0) {
-            container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><p>Nessun risultato</p></div>';
-        } else {
-            container.innerHTML = res.threads.map(t => threadCard(t)).join('');
-        }
-        searchCurrentPage = page;
-        renderSearchPagination(res.total, res.page, res.pageSize);
-    } catch {
-        container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore nella ricerca</p></div>';
-    }
-}
-
-function renderSearchPagination(total, page, pageSize) {
-    const pag = document.getElementById('searchPagination');
-    if (!pag) return;
-    const totalPages = Math.ceil(total / pageSize);
-    if (totalPages <= 1) { pag.innerHTML = ''; return; }
-    let html = '';
-    if (page > 1) html += `<button onclick="advancedSearch(${page-1})">←</button>`;
-    for (let i = 1; i <= totalPages; i++) {
-        if (totalPages > 7 && Math.abs(i - page) > 2 && i !== 1 && i !== totalPages) {
-            if (i === 2 || i === totalPages - 1) html += `<button disabled>...</button>`;
-            continue;
-        }
-        html += `<button class="${i === page ? 'active' : ''}" onclick="advancedSearch(${i})">${i}</button>`;
-    }
-    if (page < totalPages) html += `<button onclick="advancedSearch(${page+1})">→</button>`;
-    pag.innerHTML = html;
-}
-
-async function loadSearchCategories() {
-    const sel = document.getElementById('searchCategory');
-    if (sel && sel.options.length <= 1) {
-        try {
-            const cats = await api('/categories');
-            const addOpts = (list, indent = 0) => {
-                for (const c of list) {
-                    const prefix = '—'.repeat(indent) + (indent ? ' ' : '');
-                    sel.innerHTML += `<option value="${c.id}">${prefix}${c.icon} ${escapeHtml(c.name)}</option>`;
-                    if (c.subCategories?.length) addOpts(c.subCategories, indent + 1);
-                }
-            };
-            addOpts(cats);
-        } catch { /* ignore */ }
-    }
-    const tagSel = document.getElementById('searchTag');
-    if (tagSel && tagSel.options.length <= 1) {
-        try {
-            if (!cachedTags) cachedTags = await api('/leaderboard/tags');
-            tagSel.innerHTML += cachedTags.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-        } catch { /* ignore */ }
-    }
+    marketSearch = q;
+    marketPage = 1;
+    navigate('marketplace');
 }
 
 // === Profile ===
@@ -1038,9 +527,8 @@ async function loadProfile(id) {
     const container = document.getElementById('profileDetail');
     container.innerHTML = '<div class="loading">Caricamento</div>';
     try {
-        const [u, posts, repHistory] = await Promise.all([
+        const [u, repHistory] = await Promise.all([
             api(`/users/${id}`),
-            api(`/users/${id}/posts`),
             api(`/reputation/${id}`)
         ]);
         const isOwnProfile = currentUser && currentUser.userId === u.id;
@@ -1051,16 +539,13 @@ async function loadProfile(id) {
         const statusIcon = {online:'🟢',away:'🟡',busy:'🔴',offline:'⚫'}[u.status] || '⚫';
 
         let html = `
-            <span style="display:inline-block;margin-bottom:0.8rem;cursor:pointer;color:var(--accent);font-size:13px" onclick="navigate('home')">← Torna al forum</span>
+            <span style="display:inline-block;margin-bottom:0.8rem;cursor:pointer;color:var(--accent);font-size:13px" onclick="navigate('marketplace')">← Torna al marketplace</span>
             <div class="profile-header">
                 <div class="profile-avatar">${avatarHtml}</div>
                 <div class="profile-info">
                     <h2>${escapeHtml(u.username)} <span class="status-indicator" title="${u.status || 'offline'}">${statusIcon}</span></h2>
-                    ${u.rankName ? `<span class="profile-rank" style="background:${u.rankColor||'#333'};color:#fff">${u.rankIcon||''} ${escapeHtml(u.rankName)}</span>` : ''}
                     ${u.customTitle ? `<div class="profile-custom-title">${escapeHtml(u.customTitle)}</div>` : ''}
                     <div class="profile-stats-row">
-                        <span>📝 <strong>${u.threadCount}</strong> thread</span>
-                        <span>💬 <strong>${u.postCount}</strong> post</span>
                         <span>⭐ <strong>${u.reputationScore}</strong> rep</span>
                         <span>💰 <strong>${u.credits}</strong> crediti</span>
                         <span>👥 <strong>${u.followerCount}</strong> follower</span>
@@ -1120,31 +605,13 @@ async function loadProfile(id) {
 
         // Tabs
         html += `<div class="profile-tabs">
-            <button class="active" onclick="showProfileTab('posts',this)">📝 Post (${posts.length})</button>
-            <button onclick="showProfileTab('reputation',this)">⭐ Reputazione (${repHistory.length})</button>
+            <button class="active" onclick="showProfileTab('reputation',this)">⭐ Reputazione (${repHistory.length})</button>
             <button onclick="showProfileTab('followers',this);loadFollowersTab(${u.id})">👥 Follower (${u.followerCount})</button>
             <button onclick="showProfileTab('following',this);loadFollowingTab(${u.id})">👤 Seguiti (${u.followingCount})</button>
         </div>`;
 
-        // Posts tab
-        html += `<div id="profileTabPosts" class="threads-list">`;
-        if (posts.length === 0) {
-            html += '<div class="empty-state"><p>Nessun post ancora</p></div>';
-        } else {
-            html += posts.map(p => `<div class="thread-card" onclick="navigate('thread',{id:${p.threadId}})">
-                <div class="thread-card-body">
-                    <div class="thread-card-title">${escapeHtml(p.threadTitle)}</div>
-                    <div class="thread-card-meta">
-                        <span>${escapeHtml(p.content.substring(0, 150))}${p.content.length > 150 ? '...' : ''}</span>
-                        <span>${timeAgo(p.createdAt)}</span>
-                    </div>
-                </div>
-            </div>`).join('');
-        }
-        html += '</div>';
-
         // Reputation tab
-        html += `<div id="profileTabReputation" class="rep-list" style="display:none">`;
+        html += `<div id="profileTabReputation" class="rep-list">`;
         if (repHistory.length === 0) {
             html += '<div class="empty-state"><p>Nessuna reputazione ricevuta</p></div>';
         } else {
@@ -1171,7 +638,6 @@ async function loadProfile(id) {
 function showProfileTab(tab, btn) {
     document.querySelectorAll('.profile-tabs button').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    document.getElementById('profileTabPosts').style.display = tab === 'posts' ? '' : 'none';
     document.getElementById('profileTabReputation').style.display = tab === 'reputation' ? '' : 'none';
     const ft = document.getElementById('profileTabFollowers');
     const fgt = document.getElementById('profileTabFollowing');
@@ -1328,7 +794,41 @@ async function loadListingDetail(id) {
     const container = document.getElementById('listingDetail');
     container.innerHTML = '<div class="loading">Caricamento</div>';
     try {
-        const l = await api(`/marketplace/${id}`);
+        const [l, reviewData] = await Promise.all([
+            api(`/marketplace/${id}`),
+            api(`/reviews/listing/${id}`).catch(() => ({ reviews: [], averageRating: 0 }))
+        ]);
+
+        const starsHtml = (rating) => {
+            let s = '';
+            for (let i = 1; i <= 5; i++) s += i <= Math.round(rating) ? '⭐' : '☆';
+            return s;
+        };
+
+        let reviewsSection = '';
+        if (reviewData.reviews && reviewData.reviews.length > 0) {
+            reviewsSection = `
+                <div class="listing-reviews-section" style="margin-top:1.5rem">
+                    <h3>📝 Recensioni (${reviewData.reviews.length}) — Media: ${starsHtml(reviewData.averageRating)} ${reviewData.averageRating.toFixed(1)}/5</h3>
+                    <div class="reviews-list">
+                        ${reviewData.reviews.map(r => `
+                            <div class="review-card" style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:0.8rem;margin-bottom:0.5rem">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem">
+                                    <span class="review-author" style="cursor:pointer;color:var(--accent);font-weight:600" onclick="navigate('profile',{id:${r.reviewerId}})">${escapeHtml(r.reviewerName)}</span>
+                                    <span style="font-size:12px;color:var(--text-muted)">${timeAgo(r.createdAt)}</span>
+                                </div>
+                                <div class="review-stars">${starsHtml(r.rating)}</div>
+                                ${r.comment ? `<p style="margin:0.4rem 0 0;font-size:13px;color:var(--text-secondary)">${escapeHtml(r.comment)}</p>` : ''}
+                            </div>`).join('')}
+                    </div>
+                </div>`;
+        } else {
+            reviewsSection = `<div class="listing-reviews-section" style="margin-top:1.5rem">
+                <h3>📝 Recensioni</h3>
+                <p style="color:var(--text-muted);font-size:13px">Nessuna recensione ancora per questo prodotto</p>
+            </div>`;
+        }
+
         container.innerHTML = `
             <button class="btn btn-outline btn-sm" onclick="navigate('marketplace')" style="margin-bottom:1rem">← Torna al Market</button>
             <div class="listing-detail-card">
@@ -1361,10 +861,12 @@ async function loadListingDetail(id) {
                         ` : ''}
                         ${currentUser ? `<button class="btn btn-outline" onclick="toggleWishlist(${l.id})">❤️ Wishlist</button>` : ''}
                         ${currentUser && currentUser.userId !== l.sellerId ? `
-                            <button class="btn btn-outline" onclick="navigate('messages',{userId:${l.sellerId}})">✉️ Contatta Venditore</button>
+                            <button class="btn btn-accent" onclick="openChatWith(${l.sellerId},'${escapeHtml(l.sellerName).replace(/'/g, "\\'")}')">💬 Chat Venditore</button>
+                            <button class="btn btn-outline" onclick="navigate('messages',{userId:${l.sellerId}})">✉️ Messaggio</button>
                         ` : ''}
                         ${l.stock <= 0 ? '<span class="sold-out-badge">❌ ESAURITO</span>' : ''}
                     </div>
+                    ${reviewsSection}
                 </div>
             </div>`;
     } catch {
@@ -1807,14 +1309,19 @@ async function loadLeaderboard(type) {
             const topClass = i === 0 ? 'top-1' : (i === 1 ? 'top-2' : (i === 2 ? 'top-3' : ''));
             const avatarHtml = e.avatarUrl ? `<img src="${escapeHtml(e.avatarUrl)}" alt="">` : e.username.charAt(0).toUpperCase();
             let value;
-            if (type === 'reputation') value = `⭐ ${e.reputationScore}`;
-            else if (type === 'posts') value = `📝 ${e.postCount}`;
-            else value = `💰 ${e.credits}`;
+            if (type === 'rating') {
+                const stars = '⭐'.repeat(Math.round(e.avgRating || 0));
+                value = `${stars} ${(e.avgRating || 0).toFixed(1)} (${e.reviewCount} recensioni)`;
+            } else if (type === 'sales') {
+                value = `🛒 ${e.totalSales} vendite · 💰 ${(e.totalRevenue || 0).toFixed(4)}`;
+            } else {
+                value = `⭐ ${e.reputationScore} rep`;
+            }
 
             return `<div class="leaderboard-item ${topClass}">
                 <span class="lb-rank">#${i + 1}</span>
                 <div class="lb-avatar">${avatarHtml}</div>
-                <span class="lb-name" onclick="navigate('profile',{id:${e.id}})">${escapeHtml(e.username)}</span>
+                <span class="lb-name" onclick="navigate('vendorProfile',{id:${e.id}})">${escapeHtml(e.username)}</span>
                 <span class="lb-value">${value}</span>
             </div>`;
         }).join('');
@@ -1851,7 +1358,6 @@ async function loadOnlineUsers() {
                 </div>
                 <div class="online-user-info">
                     <div class="online-user-name">${escapeHtml(u.username)} ${statusIcon}</div>
-                    <div class="online-user-rank" style="color:${u.rankColor||'var(--text-muted)'}">${escapeHtml(u.rankName || '')}</div>
                 </div>
                 ${chatBtn}
             </div>`;
@@ -2035,7 +1541,6 @@ async function loadAdmin() {
             <button class="${adminTab === 'stats' ? 'active' : ''}" onclick="adminTab='stats';loadAdmin()">📊 Stats</button>
             <button class="${adminTab === 'analytics' ? 'active' : ''}" onclick="adminTab='analytics';loadAdmin()">📈 Analytics</button>
             <button class="${adminTab === 'users' ? 'active' : ''}" onclick="adminTab='users';loadAdmin()">👥 Utenti</button>
-            <button class="${adminTab === 'threads' ? 'active' : ''}" onclick="adminTab='threads';loadAdmin()">📝 Thread</button>
             <button class="${adminTab === 'listings' ? 'active' : ''}" onclick="adminTab='listings';loadAdmin()">🏪 Annunci</button>
             <button class="${adminTab === 'vendorApps' ? 'active' : ''}" onclick="adminTab='vendorApps';loadAdmin()">📋 Vendor</button>
             <button class="${adminTab === 'disputes' ? 'active' : ''}" onclick="adminTab='disputes';loadAdmin()">⚠️ Dispute</button>
@@ -2051,9 +1556,9 @@ async function loadAdmin() {
             content.innerHTML = `
                 <div class="admin-stats">
                     <div class="admin-stat"><div class="stat-value">👥 ${s.totalUsers}</div><div class="stat-label">Utenti</div></div>
-                    <div class="admin-stat"><div class="stat-value">📝 ${s.totalThreads}</div><div class="stat-label">Thread</div></div>
-                    <div class="admin-stat"><div class="stat-value">💬 ${s.totalPosts}</div><div class="stat-label">Post</div></div>
-                    <div class="admin-stat"><div class="stat-value">❤️ ${s.totalLikes}</div><div class="stat-label">Like</div></div>
+                    <div class="admin-stat"><div class="stat-value">🏪 ${s.totalListings}</div><div class="stat-label">Annunci</div></div>
+                    <div class="admin-stat"><div class="stat-value">🛒 ${s.totalOrders}</div><div class="stat-label">Ordini</div></div>
+                    <div class="admin-stat"><div class="stat-value">💰 ${s.totalSales}</div><div class="stat-label">Vendite</div></div>
                     <div class="admin-stat"><div class="stat-value">🟢 ${s.onlineUsers}</div><div class="stat-label">Online</div></div>
                 </div>
                 <h3 style="margin:1.2rem 0 0.6rem;font-size:0.9rem;font-family:'Orbitron',sans-serif;letter-spacing:1px">⏰ Utenti recenti</h3>
@@ -2062,8 +1567,6 @@ async function loadAdmin() {
                 </div>`;
         } else if (adminTab === 'users') {
             await loadAdminUsers(content);
-        } else if (adminTab === 'threads') {
-            await loadAdminThreads(content);
         } else if (adminTab === 'listings') {
             await loadAdminListings(content);
         } else if (adminTab === 'vendorApps') {
@@ -2152,58 +1655,6 @@ async function adminCredits(userId, username) {
     catch (err) { alert(err.data?.error || 'Errore'); }
 }
 
-async function loadAdminThreads(container, search = '') {
-    const params = new URLSearchParams({ page: 1, pageSize: 50 });
-    if (search) params.set('search', search);
-    const result = await api(`/admin/threads?${params}`);
-
-    container.innerHTML = `
-        <div class="admin-search">
-            <input type="text" id="adminThreadSearch" placeholder="Cerca thread..." value="${escapeHtml(search)}" onkeydown="if(event.key==='Enter')searchAdminThreads()">
-            <button class="btn btn-outline btn-sm" onclick="searchAdminThreads()">🔍</button>
-        </div>
-        <div class="threads-list">
-        ${result.threads.map(t => `
-            <div class="thread-card">
-                <div class="thread-card-body">
-                    <div class="thread-card-title">${t.isPinned ? '📌 ' : ''}${t.isLocked ? '🔒 ' : ''}${escapeHtml(t.title)}</div>
-                    <div class="thread-card-meta">
-                        <span class="author">${escapeHtml(t.authorName)}</span>
-                        <span class="category-badge">${escapeHtml(t.categoryName)}</span>
-                        <span>${timeAgo(t.createdAt)}</span>
-                        <span>💬 ${t.postCount}</span>
-                    </div>
-                </div>
-                <div class="thread-card-stats" style="flex-direction:row;gap:0.3rem">
-                    <button class="btn btn-sm ${t.isPinned ? 'btn-primary' : 'btn-outline'}" onclick="event.stopPropagation();togglePin(${t.id},${!t.isPinned})">📌</button>
-                    <button class="btn btn-sm ${t.isLocked ? 'btn-primary' : 'btn-outline'}" onclick="event.stopPropagation();toggleLock(${t.id},${!t.isLocked})">🔒</button>
-                    <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteThread(${t.id})">🗑️</button>
-                </div>
-            </div>`).join('')}
-        </div>
-        <p style="color:var(--text-muted);font-size:11px;margin-top:0.8rem">${result.total} thread totali</p>`;
-}
-
-function searchAdminThreads() {
-    loadAdminThreads(document.getElementById('adminContent'), document.getElementById('adminThreadSearch').value.trim());
-}
-
-async function togglePin(threadId, pin) {
-    try { await api(`/admin/threads/${threadId}`, { method: 'PUT', body: JSON.stringify({ isPinned: pin }) }); loadAdmin(); }
-    catch (err) { alert(err.data?.error || 'Errore'); }
-}
-
-async function toggleLock(threadId, lock) {
-    try { await api(`/admin/threads/${threadId}`, { method: 'PUT', body: JSON.stringify({ isLocked: lock }) }); loadAdmin(); }
-    catch (err) { alert(err.data?.error || 'Errore'); }
-}
-
-async function deleteThread(threadId) {
-    if (!confirm('Eliminare questo thread?')) return;
-    try { await api(`/admin/threads/${threadId}`, { method: 'DELETE' }); loadAdmin(); }
-    catch (err) { alert(err.data?.error || 'Errore'); }
-}
-
 // === Utility ===
 function escapeHtml(str) {
     if (!str) return '';
@@ -2237,29 +1688,6 @@ function formatFileSize(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 }
 
-// === Reactions ===
-async function toggleReaction(postId, emoji, threadId) {
-    if (!currentUser) { showModal('login'); return; }
-    try {
-        await api(`/posts/${postId}/reactions`, {
-            method: 'POST',
-            body: JSON.stringify({ emoji })
-        });
-        showToast(`Reazione ${emoji} aggiunta!`);
-    } catch (err) {
-        if (err.status === 409) {
-            await api(`/posts/${postId}/reactions/${encodeURIComponent(emoji)}`, { method: 'DELETE' });
-            showToast(`Reazione ${emoji} rimossa`);
-        }
-    }
-    loadThread(threadId);
-}
-
-function toggleReactionPicker(postId, threadId) {
-    const picker = document.getElementById(`reactionPicker-${postId}`);
-    if (picker) picker.style.display = picker.style.display === 'none' ? 'flex' : 'none';
-}
-
 // === Follow ===
 async function toggleFollow(userId) {
     if (!currentUser) { showModal('login'); return; }
@@ -2290,7 +1718,6 @@ async function loadFollowersTab(userId) {
                 <div class="follow-avatar">${f.avatarUrl ? `<img src="${escapeHtml(f.avatarUrl)}" alt="">` : f.username.charAt(0).toUpperCase()}</div>
                 <div class="follow-info">
                     <span class="follow-name">${escapeHtml(f.username)}</span>
-                    <span class="follow-rank" style="color:${f.rankColor || 'var(--text-muted)'}">${escapeHtml(f.rankName)}</span>
                 </div>
                 <span class="follow-date">${timeAgo(f.followedAt)}</span>
             </div>`).join('');
@@ -2310,7 +1737,6 @@ async function loadFollowingTab(userId) {
                 <div class="follow-avatar">${f.avatarUrl ? `<img src="${escapeHtml(f.avatarUrl)}" alt="">` : f.username.charAt(0).toUpperCase()}</div>
                 <div class="follow-info">
                     <span class="follow-name">${escapeHtml(f.username)}</span>
-                    <span class="follow-rank" style="color:${f.rankColor || 'var(--text-muted)'}">${escapeHtml(f.rankName)}</span>
                 </div>
                 <span class="follow-date">${timeAgo(f.followedAt)}</span>
             </div>`).join('');
@@ -2327,16 +1753,6 @@ async function updateUserStatus(status) {
 }
 
 // === Quote ===
-function quotePost(postId, authorName, content) {
-    const replyBox = document.getElementById('replyContent');
-    if (!replyBox) return;
-    const quotedText = `[quote=${authorName}]${content}[/quote]\n`;
-    replyBox.value = quotedText + replyBox.value;
-    replyBox.focus();
-    replyBox.scrollIntoView({ behavior: 'smooth' });
-    showToast('Citazione aggiunta alla risposta');
-}
-
 // === WYSIWYG Toolbar ===
 function wrapSelection(textareaId, before, after) {
     const ta = document.getElementById(textareaId);
@@ -3142,8 +2558,8 @@ async function loadAdminAnalytics(container) {
         <div class="analytics-dashboard">
             <div class="analytics-totals">
                 <div class="analytics-card"><div class="analytics-value">${d.totalUsers}</div><div class="analytics-label">👥 Utenti totali</div></div>
-                <div class="analytics-card"><div class="analytics-value">${d.totalThreads}</div><div class="analytics-label">📝 Thread</div></div>
-                <div class="analytics-card"><div class="analytics-value">${d.totalPosts}</div><div class="analytics-label">💬 Post</div></div>
+                <div class="analytics-card"><div class="analytics-value">${d.totalListings}</div><div class="analytics-label">🏪 Annunci</div></div>
+                <div class="analytics-card"><div class="analytics-value">${d.totalSales}</div><div class="analytics-label">🛒 Vendite</div></div>
                 <div class="analytics-card"><div class="analytics-value">${d.totalOrders}</div><div class="analytics-label">📦 Ordini</div></div>
                 <div class="analytics-card"><div class="analytics-value">${d.totalRevenue.toFixed(2)}</div><div class="analytics-label">💰 Revenue</div></div>
                 <div class="analytics-card"><div class="analytics-value">${d.openTickets}</div><div class="analytics-label">🎫 Ticket aperti</div></div>
@@ -3153,7 +2569,7 @@ async function loadAdminAnalytics(container) {
                 <h3>📅 Oggi</h3>
                 <div class="analytics-mini-stats">
                     <span>👥 +${d.todayUsers} utenti</span>
-                    <span>💬 +${d.todayPosts} post</span>
+                    <span>🏪 +${d.todayListings} annunci</span>
                     <span>📦 +${d.todayOrders} ordini</span>
                 </div>
             </div>
@@ -3166,9 +2582,9 @@ async function loadAdminAnalytics(container) {
             </div>
 
             <div class="analytics-section">
-                <h3>💬 Ultimi 30 giorni — Post</h3>
+                <h3>🏪 Ultimi 30 giorni — Annunci</h3>
                 <div class="analytics-chart">
-                    ${renderBarChart(d.dailyPosts)}
+                    ${renderBarChart(d.dailyListings)}
                 </div>
             </div>
 

@@ -24,19 +24,18 @@ public static class AnalyticsEndpoints
 
             // Totals
             var totalUsers = await db.Users.CountAsync();
-            var totalThreads = await db.Threads.CountAsync();
-            var totalPosts = await db.Posts.CountAsync();
+            var totalListings = await db.MarketplaceListings.CountAsync();
             var totalOrders = await db.MarketplaceOrders.CountAsync();
             var totalRevenue = await db.MarketplaceOrders.Where(o => o.Status == "Completed").SumAsync(o => o.Amount);
 
             // Today
             var usersToday = await db.Users.CountAsync(u => u.CreatedAt >= today);
-            var postsToday = await db.Posts.CountAsync(p => p.CreatedAt >= today);
+            var listingsToday = await db.MarketplaceListings.CountAsync(l => l.CreatedAt >= today);
             var ordersToday = await db.MarketplaceOrders.CountAsync(o => o.CreatedAt >= today);
 
             // Last 7 days
             var usersWeek = await db.Users.CountAsync(u => u.CreatedAt >= last7);
-            var postsWeek = await db.Posts.CountAsync(p => p.CreatedAt >= last7);
+            var listingsWeek = await db.MarketplaceListings.CountAsync(l => l.CreatedAt >= last7);
             var ordersWeek = await db.MarketplaceOrders.CountAsync(o => o.CreatedAt >= last7);
 
             // Daily data (last 30 days)
@@ -47,9 +46,9 @@ public static class AnalyticsEndpoints
                 .OrderBy(d => d.Date)
                 .ToListAsync();
 
-            var dailyPosts = await db.Posts
-                .Where(p => p.CreatedAt >= last30)
-                .GroupBy(p => p.CreatedAt.Date)
+            var dailyListings = await db.MarketplaceListings
+                .Where(l => l.CreatedAt >= last30)
+                .GroupBy(l => l.CreatedAt.Date)
                 .Select(g => new DailyDataPoint(g.Key.ToString("yyyy-MM-dd"), g.Count()))
                 .OrderBy(d => d.Date)
                 .ToListAsync();
@@ -82,10 +81,10 @@ public static class AnalyticsEndpoints
             var openTickets = await db.SupportTickets.CountAsync(t => t.Status == "Open" || t.Status == "InProgress");
 
             return Results.Ok(new AnalyticsDashboardDto(
-                totalUsers, totalThreads, totalPosts, totalOrders, totalRevenue,
-                usersToday, postsToday, ordersToday,
-                usersWeek, postsWeek, ordersWeek,
-                dailyUsers, dailyPosts, dailyOrders,
+                totalUsers, totalListings, totalOrders, totalRevenue,
+                usersToday, listingsToday, ordersToday,
+                usersWeek, listingsWeek, ordersWeek,
+                dailyUsers, dailyListings, dailyOrders,
                 topVendorDtos, openTickets
             ));
         });
@@ -130,10 +129,10 @@ public static class AnalyticsEndpoints
 public record DailyDataPoint(string Date, int Count);
 public record TopVendorDto(int SellerId, string SellerName, int Sales, decimal Revenue);
 public record AnalyticsDashboardDto(
-    int TotalUsers, int TotalThreads, int TotalPosts, int TotalOrders, decimal TotalRevenue,
-    int UsersToday, int PostsToday, int OrdersToday,
-    int UsersWeek, int PostsWeek, int OrdersWeek,
-    List<DailyDataPoint> DailyUsers, List<DailyDataPoint> DailyPosts, List<DailyDataPoint> DailyOrders,
+    int TotalUsers, int TotalListings, int TotalOrders, decimal TotalRevenue,
+    int UsersToday, int ListingsToday, int OrdersToday,
+    int UsersWeek, int ListingsWeek, int OrdersWeek,
+    List<DailyDataPoint> DailyUsers, List<DailyDataPoint> DailyListings, List<DailyDataPoint> DailyOrders,
     List<TopVendorDto> TopVendors, int OpenTickets
 );
 public record AdminLogDto(int Id, string Action, string Details, string? TargetType, int? TargetId, DateTime CreatedAt, string AdminName);

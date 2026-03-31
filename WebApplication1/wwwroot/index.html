@@ -21,7 +21,7 @@
     <div class="topbar">
         <div class="topbar-inner">
             <div class="topbar-left">
-                <span id="forumStatsBar">Caricamento stats...</span>
+                <span id="marketStatsBar">Caricamento stats...</span>
             </div>
             <div class="topbar-right">
                 <span id="onlineCount">0 utenti online</span>
@@ -46,14 +46,13 @@
             <nav class="main-nav" id="mainNav">
                 <a href="#" onclick="navigate('marketplace')" class="nav-link active" data-page="marketplace">🛒 Market</a>
                 <a href="#" onclick="navigate('vendors')" class="nav-link" data-page="vendors">🏪 Venditori</a>
-                <a href="#" onclick="navigate('home')" class="nav-link" data-page="home">💬 Forum</a>
-                <a href="#" onclick="navigate('leaderboard')" class="nav-link" data-page="leaderboard">🏆 Leaderboard</a>
+                <a href="#" onclick="navigate('leaderboard')" class="nav-link" data-page="leaderboard">🏆 Top Venditori</a>
                 <a href="#" onclick="navigate('members')" class="nav-link" data-page="members">👥 Membri</a>
             </nav>
 
             <div class="search-bar">
-                <input type="text" id="searchInput" placeholder="Cerca nel forum..." onkeydown="if(event.key==='Enter')searchThreads()">
-                <button onclick="searchThreads()">🔍</button>
+                <input type="text" id="searchInput" placeholder="Cerca nel marketplace..." onkeydown="if(event.key==='Enter')searchMarketplace()">
+                <button onclick="searchMarketplace()">🔍</button>
             </div>
 
             <nav class="header-nav" id="headerNav">
@@ -88,10 +87,6 @@
                         <a href="#" id="vendorPanelLink" style="display:none" onclick="navigate('myListings')">📦 Vendor Panel</a>
                         <a href="#" id="vendorVouchersLink" style="display:none" onclick="navigate('vouchers')">🎟️ Voucher</a>
                         <a href="#" id="vendorStatsLink" style="display:none" onclick="navigate('vendorStats')">📊 Statistiche</a>
-                        <div class="dropdown-divider"></div>
-                        <a href="#" onclick="showModal('newThread')">📝 Nuovo Thread</a>
-                        <div class="dropdown-divider"></div>
-                        <a href="#" onclick="showModal('avatar')">📷 Avatar</a>
                         <a href="#" onclick="navigate('settings2fa')">🔐 2FA</a>
                         <a href="#" id="adminLink" style="display:none" onclick="navigate('admin')">⚙️ Admin</a>
                         <div class="dropdown-divider"></div>
@@ -102,69 +97,9 @@
         </div>
     </header>
 
-    <!-- Shoutbox -->
-    <div class="shoutbox-container" id="shoutboxContainer">
-        <div class="shoutbox">
-            <div class="shoutbox-header">
-                <h3>💬 Shoutbox</h3>
-                <button class="shoutbox-toggle" onclick="toggleShoutbox()">−</button>
-            </div>
-            <div class="shoutbox-body" id="shoutboxBody">
-                <div class="shoutbox-messages" id="shoutboxMessages">
-                    <div class="loading">Caricamento...</div>
-                </div>
-                <div class="shoutbox-input" id="shoutboxInput" style="display:none">
-                    <input type="text" id="shoutboxText" placeholder="Scrivi un messaggio..." maxlength="300" onkeydown="if(event.key==='Enter')sendShoutbox()">
-                    <button onclick="sendShoutbox()">Invia</button>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Main Content -->
     <main class="main" id="mainContent">
-        <!-- Home -->
-        <div id="pageHome" style="display:none">
-            <div class="hero">
-                <img src="img/logo.png" alt="CrimeCode" class="hero-logo">
-                <p class="hero-subtitle">La community underground italiana per cybersecurity, hacking e tecnologia.</p>
-                <div class="hero-stats" id="heroStats"></div>
-                <div class="hero-glow"></div>
-            </div>
-            <div class="forum-sections" id="categoriesGrid"></div>
-            <div class="threads-section">
-                <div class="section-header">
-                    <h2>📋 Discussioni recenti</h2>
-                    <div class="section-filters">
-                        <button class="filter-btn active" onclick="currentCategory=null;currentPage=1;loadThreads();setActiveFilter(this)">Tutti</button>
-                        <span id="categoryFilters"></span>
-                    </div>
-                </div>
-                <div class="threads-list" id="threadsList"></div>
-                <div class="pagination" id="pagination"></div>
-            </div>
-        </div>
-
-        <!-- Thread Detail -->
-        <div id="pageThread" style="display:none">
-            <div class="thread-detail" id="threadDetail"></div>
-        </div>
-
-        <!-- Search -->
-        <div id="pageSearch" style="display:none">
-            <h2>🔍 Risultati ricerca</h2>
-            <div class="advanced-search-form" id="advancedSearchForm">
-                <div class="search-filters">
-                    <select id="searchCategory"><option value="">Tutte le categorie</option></select>
-                    <select id="searchTag"><option value="">Tutti i tag</option></select>
-                    <input type="date" id="searchDateFrom" placeholder="Da">
-                    <input type="date" id="searchDateTo" placeholder="A">
-                    <button class="btn btn-primary btn-sm" onclick="advancedSearch()">Cerca avanzata</button>
-                </div>
-            </div>
-            <div class="threads-list" id="searchResults"></div>
-            <div class="pagination" id="searchPagination"></div>
-        </div>
 
         <!-- Profile -->
         <div id="pageProfile" style="display:none">
@@ -247,11 +182,11 @@
 
         <!-- Leaderboard -->
         <div id="pageLeaderboard" style="display:none">
-            <h2>🏆 Leaderboard</h2>
+            <h2>🏆 Top Venditori</h2>
             <div class="leaderboard-tabs" id="leaderboardTabs">
-                <button class="active" onclick="loadLeaderboard('reputation');setLbTab(this)">⭐ Reputazione</button>
-                <button onclick="loadLeaderboard('posts');setLbTab(this)">📝 Post</button>
-                <button onclick="loadLeaderboard('credits');setLbTab(this)">💰 Crediti</button>
+                <button class="active" onclick="loadLeaderboard('rating');setLbTab(this)">⭐ Valutazione</button>
+                <button onclick="loadLeaderboard('sales');setLbTab(this)">📦 Vendite</button>
+                <button onclick="loadLeaderboard('reputation');setLbTab(this)">🔥 Reputazione</button>
             </div>
             <div class="leaderboard-list" id="leaderboardList"></div>
         </div>
@@ -372,29 +307,6 @@
                 <p class="modal-footer-text">Hai già un account? <a href="#" onclick="showModal('login')">Accedi</a></p>
             </div>
 
-            <div id="modalNewThread" style="display:none">
-                <h2>📝 Nuovo Thread</h2>
-                <form onsubmit="createThread(event)">
-                    <select id="threadCategory" required></select>
-                    <select id="threadTag"><option value="">— Tag (opzionale) —</option></select>
-                    <input type="text" id="threadTitle" placeholder="Titolo del thread" required minlength="3">
-                    <div class="wysiwyg-toolbar">
-                        <button type="button" onclick="wrapSelection('threadContent','**','**')" title="Grassetto">B</button>
-                        <button type="button" onclick="wrapSelection('threadContent','*','*')" title="Corsivo"><i>I</i></button>
-                        <button type="button" onclick="wrapSelection('threadContent','`','`')" title="Codice">&lt;/&gt;</button>
-                        <button type="button" onclick="wrapSelection('threadContent','```\n','\n```')" title="Blocco codice">▣</button>
-                        <button type="button" onclick="wrapSelection('threadContent','> ','')" title="Citazione">❝</button>
-                        <button type="button" onclick="wrapSelection('threadContent','~~','~~')" title="Barrato"><s>S</s></button>
-                        <button type="button" onclick="insertBBCode('threadContent','url')" title="Link">🔗</button>
-                        <button type="button" onclick="insertBBCode('threadContent','img')" title="Immagine">🖼️</button>
-                        <button type="button" onclick="insertBBCode('threadContent','spoiler')" title="Spoiler">👁️</button>
-                        <button type="button" onclick="showEmojiPicker('threadContent')" title="Emoji">😀</button>
-                    </div>
-                    <textarea id="threadContent" placeholder="Scrivi il tuo post... (supporta Markdown e BBCode)" rows="8" required></textarea>
-                    <div class="modal-error" id="threadError"></div>
-                    <button type="submit" class="btn btn-primary btn-full">Pubblica</button>
-                </form>
-            </div>
 
             <div id="modalSendMessage" style="display:none">
                 <h2>✉️ Invia Messaggio</h2>
@@ -524,9 +436,9 @@
                     <p>La community underground italiana di cybersecurity e coding</p>
                 </div>
                 <div class="footer-links">
-                    <a href="#" onclick="navigate('home')">Home</a>
                     <a href="#" onclick="navigate('marketplace')">Marketplace</a>
-                    <a href="#" onclick="navigate('leaderboard')">Leaderboard</a>
+                    <a href="#" onclick="navigate('vendors')">Venditori</a>
+                    <a href="#" onclick="navigate('leaderboard')">Top Venditori</a>
                     <a href="#" onclick="navigate('members')">Membri</a>
                 </div>
             </div>

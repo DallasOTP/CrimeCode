@@ -67,6 +67,22 @@ public static class ReviewEndpoints
             return Results.Ok(new { reviews, averageRating = Math.Round(avg, 1), totalReviews = reviews.Count });
         }).AllowAnonymous();
 
+        // Get reviews for a listing (all completed orders for that listing)
+        group.MapGet("/listing/{listingId:int}", async (int listingId, CrimeCodeDbContext db) =>
+        {
+            var reviews = await db.VendorReviews
+                .Include(r => r.Buyer)
+                .Include(r => r.Order)
+                .Where(r => r.Order.ListingId == listingId)
+                .OrderByDescending(r => r.CreatedAt)
+                .Select(r => new VendorReviewDto(r.Id, r.OrderId, r.Rating, r.Comment, r.CreatedAt,
+                    r.BuyerId, r.Buyer.Username, r.Buyer.AvatarUrl, r.SellerId, ""))
+                .ToListAsync();
+
+            var avg = reviews.Count > 0 ? reviews.Average(r => r.Rating) : 0;
+            return Results.Ok(new { reviews, averageRating = Math.Round(avg, 1), totalReviews = reviews.Count });
+        }).AllowAnonymous();
+
         // Check if buyer can review an order
         group.MapGet("/can-review/{orderId:int}", async (int orderId, ClaimsPrincipal principal, CrimeCodeDbContext db) =>
         {

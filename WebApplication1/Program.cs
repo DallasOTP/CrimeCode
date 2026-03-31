@@ -93,8 +93,6 @@ app.UseAuthorization();
 app.MapAuthEndpoints();
 app.MapTelegramAuthEndpoints();
 app.MapCategoryEndpoints();
-app.MapThreadEndpoints();
-app.MapPostEndpoints();
 app.MapUserEndpoints();
 app.MapAdminEndpoints();
 app.MapAvatarEndpoints();
@@ -104,12 +102,8 @@ app.MapReputationEndpoints();
 app.MapMarketplaceEndpoints();
 app.MapVendorEndpoints();
 app.MapOrderEndpoints();
-app.MapShoutboxEndpoints();
 app.MapLeaderboardEndpoints();
-app.MapReactionsEndpoints();
 app.MapFollowEndpoints();
-app.MapAttachmentEndpoints();
-app.MapSearchEndpoints();
 app.MapStatusEndpoints();
 app.MapChatEndpoints();
 app.MapReviewEndpoints();
@@ -179,27 +173,6 @@ app.Lifetime.ApplicationStarted.Register(() =>
                 new VendorReview { OrderId = orders[0].Id, BuyerId = u1.Id, SellerId = v1.Id, Rating = 5, Comment = "Guida eccellente, molto dettagliata. Consigliato!", CreatedAt = now.AddDays(-29) },
                 new VendorReview { OrderId = orders[1].Id, BuyerId = u2.Id, SellerId = v2.Id, Rating = 4, Comment = "Tool funzionante, buon supporto.", CreatedAt = now.AddDays(-19) },
                 new VendorReview { OrderId = orders[2].Id, BuyerId = u1.Id, SellerId = v2.Id, Rating = 5, Comment = "Raccolta vastissima, vale ogni satoshi!", CreatedAt = now.AddDays(-14) }
-            );
-
-            var threads = new List<ForumThread>
-            {
-                new() { Title = "Benvenuti su CrimeCode!", AuthorId = admin.Id, CategoryId = 9, IsPinned = true, CreatedAt = now.AddDays(-90), LastActivityAt = now.AddDays(-1), ViewCount = 350 },
-                new() { Title = "Guida: Come iniziare con il Pentesting", AuthorId = v1.Id, CategoryId = 10, CreatedAt = now.AddDays(-45), LastActivityAt = now.AddDays(-5), ViewCount = 180, TagId = 1 },
-                new() { Title = "Release: OSINT Framework v2.0", AuthorId = v2.Id, CategoryId = 11, CreatedAt = now.AddDays(-30), LastActivityAt = now.AddDays(-10), ViewCount = 95, TagId = 3 },
-                new() { Title = "Python: Script per SYN Scan personalizzato", AuthorId = v3.Id, CategoryId = 14, CreatedAt = now.AddDays(-20), LastActivityAt = now.AddDays(-12), ViewCount = 60, TagId = 5 },
-                new() { Title = "Mi presento — Nuovo membro!", AuthorId = u1.Id, CategoryId = 8, CreatedAt = now.AddDays(-18), LastActivityAt = now.AddDays(-15), ViewCount = 25 },
-                new() { Title = "Discussione: Quale certificazione cybersec?", AuthorId = u2.Id, CategoryId = 10, CreatedAt = now.AddDays(-10), LastActivityAt = now.AddDays(-3), ViewCount = 40, TagId = 2 },
-            };
-            db.Threads.AddRange(threads);
-            db.SaveChanges();
-
-            db.Posts.AddRange(
-                new Post { ThreadId = threads[0].Id, AuthorId = admin.Id, Content = "Benvenuti nella community underground italiana dedicata a cybersecurity, hacking etico e tecnologia. Leggete le regole e presentatevi!", CreatedAt = now.AddDays(-90) },
-                new Post { ThreadId = threads[1].Id, AuthorId = v1.Id, Content = "In questa guida vi spiegherò i fondamentali del penetration testing: dalla recon all'exploitation. Tool consigliati: Nmap, Burp Suite, Metasploit, Hashcat, John the Ripper.", CreatedAt = now.AddDays(-45) },
-                new Post { ThreadId = threads[2].Id, AuthorId = v2.Id, Content = "Ho rilasciato la versione 2.0 del mio framework OSINT open source. Nuove features: geolocation avanzata, social graph analysis, API integration per le principali piattaforme.", CreatedAt = now.AddDays(-30) },
-                new Post { ThreadId = threads[3].Id, AuthorId = v3.Id, Content = "Condivido il mio script Python per un SYN scan personalizzato usando Scapy. Più veloce e configurabile di Nmap per scan specifici. Source code nel post seguente.", CreatedAt = now.AddDays(-20) },
-                new Post { ThreadId = threads[4].Id, AuthorId = u1.Id, Content = "Ciao a tutti! Sono nuovo qui, mi interesso di cybersecurity da qualche anno. Lavoro come sysadmin e studio pentesting nel tempo libero. Contento di far parte della community!", CreatedAt = now.AddDays(-18) },
-                new Post { ThreadId = threads[5].Id, AuthorId = u2.Id, Content = "Sto valutando quale certificazione prendere: CEH, OSCP, CompTIA Security+? Quali consigliate per chi è alle prime armi ma con buone basi tecniche?", CreatedAt = now.AddDays(-10) }
             );
             db.SaveChanges();
         }
