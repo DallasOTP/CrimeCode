@@ -430,7 +430,8 @@ function showModal(type, params = {}) {
         login: 'modalLogin', register: 'modalRegister', newThread: 'modalNewThread',
         sendMessage: 'modalSendMessage', avatar: 'modalAvatar',
         newListing: 'modalNewListing', reputation: 'modalReputation',
-        vendorApply: 'modalVendorApply', orderCreate: 'modalOrderCreate'
+        vendorApply: 'modalVendorApply', orderCreate: 'modalOrderCreate',
+        createVoucher: 'modalCreateVoucher'
     };
     const el = document.getElementById(map[type]);
     if (el) el.style.display = '';
