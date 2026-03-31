@@ -1995,13 +1995,13 @@ async function loadAdmin() {
             const s = await api('/admin/stats');
             content.innerHTML = `
                 <div class="admin-stats">
-                    <div class="admin-stat"><div class="stat-value">${s.totalUsers}</div><div class="stat-label">Utenti</div></div>
-                    <div class="admin-stat"><div class="stat-value">${s.totalThreads}</div><div class="stat-label">Thread</div></div>
-                    <div class="admin-stat"><div class="stat-value">${s.totalPosts}</div><div class="stat-label">Post</div></div>
-                    <div class="admin-stat"><div class="stat-value">${s.totalLikes}</div><div class="stat-label">Like</div></div>
-                    <div class="admin-stat"><div class="stat-value">${s.onlineUsers}</div><div class="stat-label">Online</div></div>
+                    <div class="admin-stat"><div class="stat-value">👥 ${s.totalUsers}</div><div class="stat-label">Utenti</div></div>
+                    <div class="admin-stat"><div class="stat-value">📝 ${s.totalThreads}</div><div class="stat-label">Thread</div></div>
+                    <div class="admin-stat"><div class="stat-value">💬 ${s.totalPosts}</div><div class="stat-label">Post</div></div>
+                    <div class="admin-stat"><div class="stat-value">❤️ ${s.totalLikes}</div><div class="stat-label">Like</div></div>
+                    <div class="admin-stat"><div class="stat-value">🟢 ${s.onlineUsers}</div><div class="stat-label">Online</div></div>
                 </div>
-                <h3 style="margin:1rem 0 0.5rem;font-size:14px">Utenti recenti</h3>
+                <h3 style="margin:1.2rem 0 0.6rem;font-size:0.9rem;font-family:'Orbitron',sans-serif;letter-spacing:1px">⏰ Utenti recenti</h3>
                 <div class="threads-list">
                     ${s.recentUsers.map(u => `<div class="thread-card" onclick="navigate('profile',{id:${u.id}})"><div class="thread-card-body"><div class="thread-card-title">${escapeHtml(u.username)}</div><div class="thread-card-meta"><span>${timeAgo(u.createdAt)}</span></div></div></div>`).join('')}
                 </div>`;
@@ -2667,8 +2667,8 @@ async function loadWallet() {
     try {
         const wallets = await api('/wallet');
         const txData = await api('/wallet/transactions');
+        const cryptoIcons = { BTC: '₿', ETH: 'Ξ', USDT: '₮', LTC: 'Ł', XMR: 'ɱ' };
         container.innerHTML = `
-            <h2>💰 I Miei Wallet</h2>
             <div class="wallet-grid">
                 ${['BTC','ETH','USDT','LTC','XMR'].map(c => {
                     const w = wallets.find(w => w.currency === c);
@@ -2680,11 +2680,11 @@ async function loadWallet() {
                                 <button class="btn btn-sm btn-primary" onclick="walletDeposit('${c}')">📥 Deposita</button>
                                 <button class="btn btn-sm btn-outline" onclick="walletWithdraw('${c}')">📤 Preleva</button>
                             </div>` : `
-                            <button class="btn btn-sm btn-outline" onclick="walletInit('${c}')">Attiva Wallet</button>`}
+                            <button class="btn btn-sm btn-outline" onclick="walletInit('${c}')">⚡ Attiva Wallet</button>`}
                     </div>`;
                 }).join('')}
             </div>
-            <h3 style="margin-top:1.5rem">📜 Transazioni recenti</h3>
+            <h3 style="margin-top:1.5rem;font-family:'Orbitron',sans-serif;font-size:0.95rem;letter-spacing:1px">📜 Transazioni recenti</h3>
             ${txData.transactions.length === 0 ? '<p style="color:var(--text-muted)">Nessuna transazione</p>' : `
                 <div class="tx-list">
                     ${txData.transactions.map(t => `
@@ -2741,10 +2741,10 @@ async function loadWishlist() {
     try {
         const items = await api('/wishlist');
         if (!items || items.length === 0) {
-            container.innerHTML = '<div class="empty-state"><div class="empty-icon">❤️</div><p>La tua wishlist è vuota</p></div>';
+            container.innerHTML = '<div class="empty-state"><div class="empty-icon">❤️</div><p>La tua wishlist è vuota.<br>Esplora il marketplace e salva i tuoi preferiti!</p></div>';
             return;
         }
-        container.innerHTML = `<h2>❤️ Wishlist</h2>
+        container.innerHTML = `
             <div class="marketplace-grid">${items.map(w => `
                 <div class="marketplace-card" onclick="navigate('listingDetail',{id:${w.listingId}})">
                     ${w.listingImageUrl ? `<div class="marketplace-card-img"><img src="${escapeHtml(w.listingImageUrl)}" alt=""></div>` : ''}
@@ -2779,18 +2779,16 @@ async function loadMyVouchers() {
     try {
         const vouchers = await api('/vouchers/my');
         container.innerHTML = `
-            <h2>🎟️ I Miei Voucher</h2>
-            <button class="btn btn-primary btn-sm" onclick="showCreateVoucherModal()" style="margin-bottom:1rem">+ Crea Voucher</button>
-            ${vouchers.length === 0 ? '<p style="color:var(--text-muted)">Nessun voucher creato</p>' : `
+            ${vouchers.length === 0 ? '<div class="empty-state"><div class="empty-icon">🎟️</div><p>Nessun voucher creato.<br>Crea il tuo primo voucher per offrire sconti!</p></div>' : `
                 <div class="voucher-list">
                     ${vouchers.map(v => `
                         <div class="voucher-card ${!v.isActive ? 'inactive' : ''}">
                             <div class="voucher-code">${escapeHtml(v.code)}</div>
                             <div class="voucher-info">
-                                <span>-${v.discountPercent}%${v.maxDiscount ? ` (max ${v.maxDiscount})` : ''}</span>
-                                <span>Usi: ${v.usedCount}/${v.maxUses}</span>
-                                ${v.listingTitle ? `<span>Annuncio: ${escapeHtml(v.listingTitle)}</span>` : '<span>Tutti gli annunci</span>'}
-                                ${v.expiresAt ? `<span>Scade: ${new Date(v.expiresAt).toLocaleDateString('it-IT')}</span>` : ''}
+                                <span>🏷️ -${v.discountPercent}%${v.maxDiscount ? ` (max ${v.maxDiscount})` : ''}</span>
+                                <span>📊 Usi: ${v.usedCount}/${v.maxUses}</span>
+                                ${v.listingTitle ? `<span>📦 ${escapeHtml(v.listingTitle)}</span>` : '<span>🌐 Tutti gli annunci</span>'}
+                                ${v.expiresAt ? `<span>⏰ Scade: ${new Date(v.expiresAt).toLocaleDateString('it-IT')}</span>` : ''}
                             </div>
                             <div class="voucher-actions">
                                 <button class="btn btn-sm ${v.isActive ? 'btn-outline' : 'btn-primary'}" onclick="toggleVoucher(${v.id})">${v.isActive ? '⏸️ Disattiva' : '▶️ Attiva'}</button>
@@ -2842,16 +2840,15 @@ async function loadVendorStats() {
     try {
         const s = await api('/vendor-stats');
         container.innerHTML = `
-            <h2>📊 Statistiche Venditore</h2>
             <div class="admin-stats">
-                <div class="admin-stat"><div class="stat-value">${s.totalSales}</div><div class="stat-label">Vendite Totali</div></div>
-                <div class="admin-stat"><div class="stat-value">${s.totalRevenue.toFixed(4)}</div><div class="stat-label">Ricavo Totale</div></div>
-                <div class="admin-stat"><div class="stat-value">${s.activeListings}</div><div class="stat-label">Annunci Attivi</div></div>
-                <div class="admin-stat"><div class="stat-value">${s.pendingOrders}</div><div class="stat-label">Ordini Pending</div></div>
-                <div class="admin-stat"><div class="stat-value">${s.disputedOrders}</div><div class="stat-label">Dispute</div></div>
+                <div class="admin-stat"><div class="stat-value">🛒 ${s.totalSales}</div><div class="stat-label">Vendite Totali</div></div>
+                <div class="admin-stat"><div class="stat-value">💰 ${s.totalRevenue.toFixed(4)}</div><div class="stat-label">Ricavo Totale</div></div>
+                <div class="admin-stat"><div class="stat-value">📦 ${s.activeListings}</div><div class="stat-label">Annunci Attivi</div></div>
+                <div class="admin-stat"><div class="stat-value">⏳ ${s.pendingOrders}</div><div class="stat-label">Ordini Pending</div></div>
+                <div class="admin-stat"><div class="stat-value">⚠️ ${s.disputedOrders}</div><div class="stat-label">Dispute</div></div>
                 <div class="admin-stat"><div class="stat-value">${s.averageRating}⭐</div><div class="stat-label">${s.totalReviews} Recensioni</div></div>
             </div>
-            <h3 style="margin-top:1.5rem">📈 Ultimi 6 mesi</h3>
+            <h3 style="margin-top:1.5rem;font-family:'Orbitron',sans-serif;font-size:0.95rem;letter-spacing:1px">📈 Ultimi 6 mesi</h3>
             <div class="monthly-stats">
                 ${s.last6Months.map(m => `
                     <div class="monthly-stat">
@@ -2887,21 +2884,21 @@ async function load2FASettings() {
         const status = await api('/2fa/status');
         if (status.enabled) {
             container.innerHTML = `
-                <h2>🔐 Autenticazione 2FA</h2>
                 <div class="twofa-status enabled">
-                    <p>✅ 2FA è <strong>ATTIVO</strong></p>
+                    <div class="status-badge enabled">🛡️ ATTIVO</div>
+                    <p style="color:var(--text-secondary);margin-bottom:0.5rem">Il tuo account è protetto con autenticazione a due fattori.</p>
                     <div class="form-group">
                         <label>Per disattivare, inserisci il codice attuale:</label>
-                        <input type="text" id="disable2FACode" placeholder="123456" maxlength="6">
-                        <button class="btn btn-danger btn-sm" onclick="disable2FA()" style="margin-top:0.5rem">Disattiva 2FA</button>
+                        <input type="text" id="disable2FACode" placeholder="000000" maxlength="6">
+                        <button class="btn btn-danger btn-sm" onclick="disable2FA()" style="margin-top:0.8rem;width:100%">🔓 Disattiva 2FA</button>
                     </div>
                 </div>`;
         } else {
             container.innerHTML = `
-                <h2>🔐 Autenticazione 2FA</h2>
                 <div class="twofa-status disabled">
-                    <p>⚠️ 2FA è <strong>NON ATTIVO</strong></p>
-                    <button class="btn btn-primary" onclick="setup2FA()">Configura 2FA</button>
+                    <div class="status-badge disabled">⚠️ NON ATTIVO</div>
+                    <p style="color:var(--text-secondary);margin-bottom:1rem">Proteggi il tuo account attivando l'autenticazione a due fattori.</p>
+                    <button class="btn btn-primary" onclick="setup2FA()" style="padding:0.6rem 2rem">🔐 Configura 2FA</button>
                 </div>
                 <div id="twofaSetup"></div>`;
         }
