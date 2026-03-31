@@ -9,7 +9,8 @@ public record AuthResponse(int UserId, string Username, string Token);
 // --- User ---
 public record UserProfile(int Id, string Username, string? AvatarUrl, string? Bio, string? Signature, string Role, 
     string? CustomTitle, DateTime CreatedAt, DateTime LastSeenAt, int ThreadCount, int PostCount, 
-    int Credits, int ReputationScore, string RankName, string RankColor, string RankIcon);
+    int Credits, int ReputationScore, string RankName, string RankColor, string RankIcon,
+    string Status, int FollowerCount, int FollowingCount, bool FollowedByCurrentUser);
 
 // --- Category ---
 public record CategoryDto(int Id, string Name, string Description, string Icon, int ThreadCount, int? ParentId, bool IsMarketplace, List<CategoryDto>? SubCategories);
@@ -29,7 +30,23 @@ public record PostDto(int Id, string Content, string AuthorName, int AuthorId, s
     string AuthorRole, string RankName, string RankColor, string RankIcon, string? AuthorSignature,
     int AuthorPostCount, int AuthorReputation, DateTime AuthorJoinDate,
     DateTime CreatedAt, DateTime? EditedAt, int LikeCount, bool LikedByCurrentUser, 
-    int? ParentPostId, List<PostDto> Replies);
+    int? ParentPostId, List<PostDto> Replies,
+    Dictionary<string, int> Reactions, List<string> CurrentUserReactions, List<AttachmentDto> Attachments);
+
+// --- Attachment ---
+public record AttachmentDto(int Id, string FileName, string Url, string ContentType, long FileSizeBytes);
+
+// --- Reaction ---
+public record AddReactionRequest(string Emoji);
+
+// --- Follow ---
+public record FollowDto(int Id, string Username, string? AvatarUrl, string RankName, string RankColor, DateTime FollowedAt);
+
+// --- Search ---
+public record AdvancedSearchRequest(string? Query, int? CategoryId, int? AuthorId, int? TagId, string? DateFrom, string? DateTo, int Page = 1, int PageSize = 20);
+
+// --- User Status ---
+public record UpdateStatusRequest(string Status);
 
 // --- Admin ---
 public record AdminUserDto(int Id, string Username, string Email, string Role, DateTime CreatedAt, 
@@ -66,7 +83,7 @@ public record LeaderboardEntry(int Id, string Username, string? AvatarUrl, strin
     int PostCount, int ThreadCount, int ReputationScore, int Credits);
 
 // --- Online Users ---
-public record OnlineUserDto(int Id, string Username, string? AvatarUrl, string Role, string RankName, string RankColor);
+public record OnlineUserDto(int Id, string Username, string? AvatarUrl, string Role, string RankName, string RankColor, string Status);
 
 // --- Thread Tags ---
 public record ThreadTagDto(int Id, string Name, string Color);

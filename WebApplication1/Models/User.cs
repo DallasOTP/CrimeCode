@@ -18,10 +18,12 @@ public class User
     public bool IsBanned { get; set; } = false;
     public string? BanReason { get; set; }
     public long? TelegramId { get; set; }
+    public string Status { get; set; } = "online"; // online, away, busy, offline
 
     public ICollection<ForumThread> Threads { get; set; } = [];
     public ICollection<Post> Posts { get; set; } = [];
     public ICollection<PostLike> Likes { get; set; } = [];
+    public ICollection<PostReaction> Reactions { get; set; } = [];
     public ICollection<Notification> Notifications { get; set; } = [];
     public ICollection<PrivateMessage> SentMessages { get; set; } = [];
     public ICollection<PrivateMessage> ReceivedMessages { get; set; } = [];
@@ -30,4 +32,7 @@ public class User
     public ICollection<CreditTransaction> CreditTransactions { get; set; } = [];
     public ICollection<MarketplaceListing> MarketplaceListings { get; set; } = [];
     public ICollection<ShoutboxMessage> ShoutboxMessages { get; set; } = [];
+    public ICollection<UserFollow> Followers { get; set; } = [];
+    public ICollection<UserFollow> Following { get; set; } = [];
+    public ICollection<PostAttachment> Attachments { get; set; } = [];
 }

@@ -652,6 +652,7 @@ function renderPost(p, threadId) {
 
     let actionsHtml = `<button class="${likeClass}" onclick="event.stopPropagation();toggleLike(${threadId},${p.id},this)">❤️ ${p.likeCount}</button>`;
     if (currentUser) {
+        actionsHtml += `<button onclick="event.stopPropagation();quotePost(${p.id},'${escapeHtml(p.authorName).replace(/'/g, "\\'")}',\`${escapeHtml(p.content).replace(/`/g, '\\`').replace(/\\/g, '\\\\')}\`)" title="Cita">💬 Cita</button>`;
         actionsHtml += `<button onclick="event.stopPropagation();showReplyBox(${threadId},${p.id})">↩️ Rispondi</button>`;
         if (currentUser.userId !== p.authorId) {
             actionsHtml += `<button onclick="event.stopPropagation();showModal('reputation',{userId:${p.authorId},username:'${escapeHtml(p.authorName).replace(/'/g, "\\'")}'})">⭐ Rep</button>`;
@@ -661,7 +662,42 @@ function renderPost(p, threadId) {
         actionsHtml += `<button onclick="event.stopPropagation();deletePost(${threadId},${p.id})">🗑️</button>`;
     }
 
-    let html = `<div class="post" id="post-${p.id}">
+    // Reactions bar
+    let reactionsHtml = '';
+    if (p.reactions && Object.keys(p.reactions).length > 0) {
+        reactionsHtml = '<div class="post-reactions">';
+        for (const [emoji, count] of Object.entries(p.reactions)) {
+            const active = p.currentUserReactions && p.currentUserReactions.includes(emoji) ? ' active' : '';
+            reactionsHtml += `<button class="reaction-btn${active}" onclick="event.stopPropagation();toggleReaction(${p.id},'${emoji}',${threadId})">${emoji} <span>${count}</span></button>`;
+        }
+        reactionsHtml += '</div>';
+    }
+
+    // Add reaction button
+    let addReactionHtml = '';
+    if (currentUser) {
+        addReactionHtml = `<div class="add-reaction-wrap"><button class="add-reaction-btn" onclick="event.stopPropagation();toggleReactionPicker(${p.id},${threadId})">😀+</button>
+            <div class="reaction-picker" id="reactionPicker-${p.id}" style="display:none">
+                ${['👍','👎','❤️','😂','😮','😢','🔥','💀','🤔','👀','🎯','💯','⚡','🚀','💎'].map(e => `<button onclick="event.stopPropagation();toggleReaction(${p.id},'${e}',${threadId})">${e}</button>`).join('')}
+            </div>
+        </div>`;
+    }
+
+    // Attachments
+    let attachmentsHtml = '';
+    if (p.attachments && p.attachments.length > 0) {
+        attachmentsHtml = '<div class="post-attachments"><span class="attachments-label">📎 Allegati:</span>';
+        for (const att of p.attachments) {
+            if (att.contentType && att.contentType.startsWith('image/')) {
+                attachmentsHtml += `<div class="attachment-item attachment-image"><img src="${escapeHtml(att.url)}" alt="${escapeHtml(att.fileName)}" loading="lazy" onclick="window.open('${escapeHtml(att.url)}','_blank')"><span class="attachment-name">${escapeHtml(att.fileName)}</span></div>`;
+            } else {
+                attachmentsHtml += `<div class="attachment-item"><a href="${escapeHtml(att.url)}" target="_blank" rel="noopener noreferrer">📄 ${escapeHtml(att.fileName)}</a> <span class="attachment-size">(${formatFileSize(att.fileSizeBytes)})</span></div>`;
+            }
+        }
+        attachmentsHtml += '</div>';
+    }
+
+    let html = `<div class="post fade-in" id="post-${p.id}">
         ${authorHtml}
         <div class="post-content-area">
             <div class="post-header">
@@ -669,6 +705,8 @@ function renderPost(p, threadId) {
                 <div class="post-actions">${actionsHtml}</div>
             </div>
             <div class="post-body">${formatContent(p.content)}</div>
+            ${attachmentsHtml}
+            <div class="post-footer-bar">${reactionsHtml}${addReactionHtml}</div>
             <div id="replyBox-${p.id}"></div>
         </div>
     </div>`;
@@ -684,7 +722,22 @@ function renderPost(p, threadId) {
 function formatContent(text) {
     if (!text) return '';
     let s = escapeHtml(text);
-    // Code blocks
+    // BBCode
+    s = s.replace(/\[b\]([\s\S]*?)\[\/b\]/gi, '<strong>$1</strong>');
+    s = s.replace(/\[i\]([\s\S]*?)\[\/i\]/gi, '<em>$1</em>');
+    s = s.replace(/\[u\]([\s\S]*?)\[\/u\]/gi, '<u>$1</u>');
+    s = s.replace(/\[s\]([\s\S]*?)\[\/s\]/gi, '<s>$1</s>');
+    s = s.replace(/\[color=([^\]]+)\]([\s\S]*?)\[\/color\]/gi, '<span style="color:$1">$2</span>');
+    s = s.replace(/\[size=([^\]]+)\]([\s\S]*?)\[\/size\]/gi, '<span style="font-size:$1">$2</span>');
+    s = s.replace(/\[url=([^\]]+)\]([\s\S]*?)\[\/url\]/gi, '<a href="$1" target="_blank" rel="noopener noreferrer">$2</a>');
+    s = s.replace(/\[url\]([\s\S]*?)\[\/url\]/gi, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+    s = s.replace(/\[img\]([\s\S]*?)\[\/img\]/gi, '<img src="$1" class="post-image" alt="img" loading="lazy">');
+    s = s.replace(/\[quote\]([\s\S]*?)\[\/quote\]/gi, '<blockquote class="bb-quote">$1</blockquote>');
+    s = s.replace(/\[quote=([^\]]+)\]([\s\S]*?)\[\/quote\]/gi, '<blockquote class="bb-quote"><cite>$1:</cite>$2</blockquote>');
+    s = s.replace(/\[code\]([\s\S]*?)\[\/code\]/gi, '<pre><code>$1</code></pre>');
+    s = s.replace(/\[spoiler\]([\s\S]*?)\[\/spoiler\]/gi, '<details class="spoiler"><summary>Spoiler</summary>$1</details>');
+    s = s.replace(/\[list\]([\s\S]*?)\[\/list\]/gi, (m, inner) => '<ul>' + inner.replace(/\[\*\]/g, '<li>') + '</ul>');
+    // Markdown — Code blocks
     s = s.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
     // Inline code
     s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -692,6 +745,8 @@ function formatContent(text) {
     s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     // Italic
     s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    // Strikethrough
+    s = s.replace(/~~(.+?)~~/g, '<s>$1</s>');
     // Blockquote
     s = s.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
     // Line breaks
@@ -777,17 +832,92 @@ async function searchThreads() {
     const q = document.getElementById('searchInput').value.trim();
     if (!q || q.length < 2) return;
     navigate('search');
+    loadSearchCategories();
     const container = document.getElementById('searchResults');
     container.innerHTML = '<div class="loading">Ricerca</div>';
     try {
-        const results = await api(`/threads/search?q=${encodeURIComponent(q)}`);
-        if (results.length === 0) {
+        const res = await api('/search/advanced', {
+            method: 'POST',
+            body: JSON.stringify({ query: q, page: 1, pageSize: 20 })
+        });
+        if (!res.threads || res.threads.length === 0) {
             container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><p>Nessun risultato</p></div>';
         } else {
-            container.innerHTML = results.map(t => threadCard(t)).join('');
+            container.innerHTML = res.threads.map(t => threadCard(t)).join('');
         }
+        renderSearchPagination(res.total, res.page, res.pageSize, q);
     } catch {
         container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore nella ricerca</p></div>';
+    }
+}
+
+let searchCurrentPage = 1;
+
+async function advancedSearch(page = 1) {
+    const q = document.getElementById('searchInput').value.trim();
+    const categoryId = document.getElementById('searchCategory').value || null;
+    const tagId = document.getElementById('searchTag').value || null;
+    const dateFrom = document.getElementById('searchDateFrom').value || null;
+    const dateTo = document.getElementById('searchDateTo').value || null;
+    
+    const container = document.getElementById('searchResults');
+    container.innerHTML = '<div class="loading">Ricerca avanzata...</div>';
+    try {
+        const res = await api('/search/advanced', {
+            method: 'POST',
+            body: JSON.stringify({ query: q || null, categoryId: categoryId ? parseInt(categoryId) : null, tagId: tagId ? parseInt(tagId) : null, dateFrom, dateTo, page, pageSize: 20 })
+        });
+        if (!res.threads || res.threads.length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="empty-icon">🔍</div><p>Nessun risultato</p></div>';
+        } else {
+            container.innerHTML = res.threads.map(t => threadCard(t)).join('');
+        }
+        searchCurrentPage = page;
+        renderSearchPagination(res.total, res.page, res.pageSize);
+    } catch {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore nella ricerca</p></div>';
+    }
+}
+
+function renderSearchPagination(total, page, pageSize) {
+    const pag = document.getElementById('searchPagination');
+    if (!pag) return;
+    const totalPages = Math.ceil(total / pageSize);
+    if (totalPages <= 1) { pag.innerHTML = ''; return; }
+    let html = '';
+    if (page > 1) html += `<button onclick="advancedSearch(${page-1})">←</button>`;
+    for (let i = 1; i <= totalPages; i++) {
+        if (totalPages > 7 && Math.abs(i - page) > 2 && i !== 1 && i !== totalPages) {
+            if (i === 2 || i === totalPages - 1) html += `<button disabled>...</button>`;
+            continue;
+        }
+        html += `<button class="${i === page ? 'active' : ''}" onclick="advancedSearch(${i})">${i}</button>`;
+    }
+    if (page < totalPages) html += `<button onclick="advancedSearch(${page+1})">→</button>`;
+    pag.innerHTML = html;
+}
+
+async function loadSearchCategories() {
+    const sel = document.getElementById('searchCategory');
+    if (sel && sel.options.length <= 1) {
+        try {
+            const cats = await api('/categories');
+            const addOpts = (list, indent = 0) => {
+                for (const c of list) {
+                    const prefix = '—'.repeat(indent) + (indent ? ' ' : '');
+                    sel.innerHTML += `<option value="${c.id}">${prefix}${c.icon} ${escapeHtml(c.name)}</option>`;
+                    if (c.subCategories?.length) addOpts(c.subCategories, indent + 1);
+                }
+            };
+            addOpts(cats);
+        } catch { /* ignore */ }
+    }
+    const tagSel = document.getElementById('searchTag');
+    if (tagSel && tagSel.options.length <= 1) {
+        try {
+            if (!cachedTags) cachedTags = await api('/leaderboard/tags');
+            tagSel.innerHTML += cachedTags.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        } catch { /* ignore */ }
     }
 }
 
@@ -806,12 +936,14 @@ async function loadProfile(id) {
             ? `<img src="${escapeHtml(u.avatarUrl)}" alt="">`
             : u.username.charAt(0).toUpperCase();
 
+        const statusIcon = {online:'🟢',away:'🟡',busy:'🔴',offline:'⚫'}[u.status] || '⚫';
+
         let html = `
             <span style="display:inline-block;margin-bottom:0.8rem;cursor:pointer;color:var(--accent);font-size:13px" onclick="navigate('home')">← Torna al forum</span>
             <div class="profile-header">
                 <div class="profile-avatar">${avatarHtml}</div>
                 <div class="profile-info">
-                    <h2>${escapeHtml(u.username)}</h2>
+                    <h2>${escapeHtml(u.username)} <span class="status-indicator" title="${u.status || 'offline'}">${statusIcon}</span></h2>
                     ${u.rankName ? `<span class="profile-rank" style="background:${u.rankColor||'#333'};color:#fff">${u.rankIcon||''} ${escapeHtml(u.rankName)}</span>` : ''}
                     ${u.customTitle ? `<div class="profile-custom-title">${escapeHtml(u.customTitle)}</div>` : ''}
                     <div class="profile-stats-row">
@@ -819,14 +951,23 @@ async function loadProfile(id) {
                         <span>💬 <strong>${u.postCount}</strong> post</span>
                         <span>⭐ <strong>${u.reputationScore}</strong> rep</span>
                         <span>💰 <strong>${u.credits}</strong> crediti</span>
+                        <span>👥 <strong>${u.followerCount}</strong> follower</span>
+                        <span>👤 <strong>${u.followingCount}</strong> seguiti</span>
                         <span>📅 Membro dal ${new Date(u.createdAt).toLocaleDateString('it-IT')}</span>
                     </div>
                     <div class="profile-actions">
                         ${isOwnProfile ? `<button class="btn btn-outline btn-sm" onclick="showModal('avatar')">📷 Avatar</button>
-                            <button class="btn btn-outline btn-sm" onclick="toggleProfileEdit(${u.id})">✏️ Modifica</button>` : ''}
+                            <button class="btn btn-outline btn-sm" onclick="toggleProfileEdit(${u.id})">✏️ Modifica</button>
+                            <select class="status-select" onchange="updateUserStatus(this.value)">
+                                <option value="online" ${u.status==='online'?'selected':''}>🟢 Online</option>
+                                <option value="away" ${u.status==='away'?'selected':''}>🟡 Away</option>
+                                <option value="busy" ${u.status==='busy'?'selected':''}>🔴 Busy</option>
+                                <option value="offline" ${u.status==='offline'?'selected':''}>⚫ Offline</option>
+                            </select>` : ''}
                         ${currentUser && !isOwnProfile ? `
                             <button class="btn btn-primary btn-sm" onclick="showModal('sendMessage',{userId:${u.id},username:'${escapeHtml(u.username).replace(/'/g, "\\'")}'})">✉️ Messaggio</button>
-                            <button class="btn btn-outline btn-sm" onclick="showModal('reputation',{userId:${u.id},username:'${escapeHtml(u.username).replace(/'/g, "\\'")}'})">⭐ Rep</button>` : ''}
+                            <button class="btn btn-outline btn-sm" onclick="showModal('reputation',{userId:${u.id},username:'${escapeHtml(u.username).replace(/'/g, "\\'")}'})">⭐ Rep</button>
+                            <button class="btn ${u.followedByCurrentUser ? 'btn-danger' : 'btn-primary'} btn-sm" onclick="toggleFollow(${u.id})" id="followBtn">${u.followedByCurrentUser ? '❌ Smetti di seguire' : '➕ Segui'}</button>` : ''}
                     </div>
                 </div>
             </div>`;
@@ -851,6 +992,8 @@ async function loadProfile(id) {
         html += `<div class="profile-tabs">
             <button class="active" onclick="showProfileTab('posts',this)">📝 Post (${posts.length})</button>
             <button onclick="showProfileTab('reputation',this)">⭐ Reputazione (${repHistory.length})</button>
+            <button onclick="showProfileTab('followers',this);loadFollowersTab(${u.id})">👥 Follower (${u.followerCount})</button>
+            <button onclick="showProfileTab('following',this);loadFollowingTab(${u.id})">👤 Seguiti (${u.followingCount})</button>
         </div>`;
 
         // Posts tab
@@ -884,6 +1027,11 @@ async function loadProfile(id) {
         }
         html += '</div>';
 
+        // Followers tab
+        html += '<div id="profileTabFollowers" class="follow-list" style="display:none"><div class="loading">Caricamento...</div></div>';
+        // Following tab
+        html += '<div id="profileTabFollowing" class="follow-list" style="display:none"><div class="loading">Caricamento...</div></div>';
+
         container.innerHTML = html;
     } catch {
         container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Utente non trovato</p></div>';
@@ -895,6 +1043,10 @@ function showProfileTab(tab, btn) {
     btn.classList.add('active');
     document.getElementById('profileTabPosts').style.display = tab === 'posts' ? '' : 'none';
     document.getElementById('profileTabReputation').style.display = tab === 'reputation' ? '' : 'none';
+    const ft = document.getElementById('profileTabFollowers');
+    const fgt = document.getElementById('profileTabFollowing');
+    if (ft) ft.style.display = tab === 'followers' ? '' : 'none';
+    if (fgt) fgt.style.display = tab === 'following' ? '' : 'none';
 }
 
 function toggleProfileEdit(userId) {
@@ -1050,13 +1202,14 @@ async function loadOnlineUsers() {
         }
         grid.innerHTML = users.map(u => {
             const avatarHtml = u.avatarUrl ? `<img src="${escapeHtml(u.avatarUrl)}" alt="">` : u.username.charAt(0).toUpperCase();
+            const statusIcon = {online:'🟢',away:'🟡',busy:'🔴',offline:'⚫'}[u.status] || '🟢';
             return `<div class="online-user-card" onclick="navigate('profile',{id:${u.id}})">
                 <div class="online-user-avatar">
                     ${avatarHtml}
-                    <div class="online-indicator"></div>
+                    <div class="online-indicator ${u.status || 'online'}"></div>
                 </div>
                 <div class="online-user-info">
-                    <div class="online-user-name">${escapeHtml(u.username)}</div>
+                    <div class="online-user-name">${escapeHtml(u.username)} ${statusIcon}</div>
                     <div class="online-user-rank" style="color:${u.rankColor||'var(--text-muted)'}">${escapeHtml(u.rankName || '')}</div>
                 </div>
             </div>`;
@@ -1415,3 +1568,224 @@ function timeAgo(dateStr) {
     if (months < 12) return `${months}me fa`;
     return `${Math.floor(months / 12)}a fa`;
 }
+
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+// === Reactions ===
+async function toggleReaction(postId, emoji, threadId) {
+    if (!currentUser) { showModal('login'); return; }
+    try {
+        await api(`/posts/${postId}/reactions`, {
+            method: 'POST',
+            body: JSON.stringify({ emoji })
+        });
+        showToast(`Reazione ${emoji} aggiunta!`);
+    } catch (err) {
+        if (err.status === 409) {
+            await api(`/posts/${postId}/reactions/${encodeURIComponent(emoji)}`, { method: 'DELETE' });
+            showToast(`Reazione ${emoji} rimossa`);
+        }
+    }
+    loadThread(threadId);
+}
+
+function toggleReactionPicker(postId, threadId) {
+    const picker = document.getElementById(`reactionPicker-${postId}`);
+    if (picker) picker.style.display = picker.style.display === 'none' ? 'flex' : 'none';
+}
+
+// === Follow ===
+async function toggleFollow(userId) {
+    if (!currentUser) { showModal('login'); return; }
+    const btn = document.getElementById('followBtn');
+    try {
+        if (btn && btn.textContent.includes('Smetti')) {
+            await api(`/users/${userId}/follow`, { method: 'DELETE' });
+            showToast('Non segui più questo utente');
+        } else {
+            await api(`/users/${userId}/follow`, { method: 'POST' });
+            showToast('Ora segui questo utente!');
+        }
+        loadProfile(userId);
+    } catch (err) {
+        showToast(err.data?.error || 'Errore', 'error');
+    }
+}
+
+async function loadFollowersTab(userId) {
+    const container = document.getElementById('profileTabFollowers');
+    if (!container) return;
+    try {
+        const followers = await api(`/users/${userId}/followers`);
+        if (followers.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>Nessun follower</p></div>';
+        } else {
+            container.innerHTML = followers.map(f => `<div class="follow-card" onclick="navigate('profile',{id:${f.id}})">
+                <div class="follow-avatar">${f.avatarUrl ? `<img src="${escapeHtml(f.avatarUrl)}" alt="">` : f.username.charAt(0).toUpperCase()}</div>
+                <div class="follow-info">
+                    <span class="follow-name">${escapeHtml(f.username)}</span>
+                    <span class="follow-rank" style="color:${f.rankColor || 'var(--text-muted)'}">${escapeHtml(f.rankName)}</span>
+                </div>
+                <span class="follow-date">${timeAgo(f.followedAt)}</span>
+            </div>`).join('');
+        }
+    } catch { container.innerHTML = '<div class="empty-state"><p>Errore</p></div>'; }
+}
+
+async function loadFollowingTab(userId) {
+    const container = document.getElementById('profileTabFollowing');
+    if (!container) return;
+    try {
+        const following = await api(`/users/${userId}/following`);
+        if (following.length === 0) {
+            container.innerHTML = '<div class="empty-state"><p>Non segue nessuno</p></div>';
+        } else {
+            container.innerHTML = following.map(f => `<div class="follow-card" onclick="navigate('profile',{id:${f.id}})">
+                <div class="follow-avatar">${f.avatarUrl ? `<img src="${escapeHtml(f.avatarUrl)}" alt="">` : f.username.charAt(0).toUpperCase()}</div>
+                <div class="follow-info">
+                    <span class="follow-name">${escapeHtml(f.username)}</span>
+                    <span class="follow-rank" style="color:${f.rankColor || 'var(--text-muted)'}">${escapeHtml(f.rankName)}</span>
+                </div>
+                <span class="follow-date">${timeAgo(f.followedAt)}</span>
+            </div>`).join('');
+        }
+    } catch { container.innerHTML = '<div class="empty-state"><p>Errore</p></div>'; }
+}
+
+// === User Status ===
+async function updateUserStatus(status) {
+    try {
+        await api('/users/status', { method: 'PUT', body: JSON.stringify({ status }) });
+        showToast(`Stato aggiornato: ${status}`);
+    } catch { showToast('Errore nel cambio stato', 'error'); }
+}
+
+// === Quote ===
+function quotePost(postId, authorName, content) {
+    const replyBox = document.getElementById('replyContent');
+    if (!replyBox) return;
+    const quotedText = `[quote=${authorName}]${content}[/quote]\n`;
+    replyBox.value = quotedText + replyBox.value;
+    replyBox.focus();
+    replyBox.scrollIntoView({ behavior: 'smooth' });
+    showToast('Citazione aggiunta alla risposta');
+}
+
+// === WYSIWYG Toolbar ===
+function wrapSelection(textareaId, before, after) {
+    const ta = document.getElementById(textareaId);
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selected = ta.value.substring(start, end);
+    ta.value = ta.value.substring(0, start) + before + selected + after + ta.value.substring(end);
+    ta.focus();
+    ta.selectionStart = start + before.length;
+    ta.selectionEnd = start + before.length + selected.length;
+}
+
+function insertBBCode(textareaId, type) {
+    const ta = document.getElementById(textareaId);
+    if (!ta) return;
+    const start = ta.selectionStart;
+    let insert = '';
+    if (type === 'url') {
+        const url = prompt('Inserisci URL:');
+        if (!url) return;
+        const text = ta.value.substring(ta.selectionStart, ta.selectionEnd) || 'Link';
+        insert = `[url=${url}]${text}[/url]`;
+    } else if (type === 'img') {
+        const url = prompt('Inserisci URL immagine:');
+        if (!url) return;
+        insert = `[img]${url}[/img]`;
+    } else if (type === 'spoiler') {
+        const selected = ta.value.substring(ta.selectionStart, ta.selectionEnd) || 'Contenuto nascosto';
+        insert = `[spoiler]${selected}[/spoiler]`;
+    }
+    ta.value = ta.value.substring(0, start) + insert + ta.value.substring(ta.selectionEnd);
+    ta.focus();
+}
+
+function showEmojiPicker(textareaId) {
+    const emojis = ['😀','😂','🤣','😎','🤔','😮','😢','🔥','💀','👀','👍','👎','❤️','💯','⚡','🚀','💎','🎯','✅','❌'];
+    const ta = document.getElementById(textareaId);
+    if (!ta) return;
+    const existing = document.getElementById('emojiPickerInline');
+    if (existing) { existing.remove(); return; }
+    const picker = document.createElement('div');
+    picker.id = 'emojiPickerInline';
+    picker.className = 'emoji-picker-inline';
+    picker.innerHTML = emojis.map(e => `<button type="button" onclick="insertEmoji('${textareaId}','${e}')">${e}</button>`).join('');
+    ta.parentElement.insertBefore(picker, ta);
+}
+
+function insertEmoji(textareaId, emoji) {
+    const ta = document.getElementById(textareaId);
+    if (!ta) return;
+    const start = ta.selectionStart;
+    ta.value = ta.value.substring(0, start) + emoji + ta.value.substring(ta.selectionEnd);
+    ta.focus();
+    ta.selectionStart = ta.selectionEnd = start + emoji.length;
+    const picker = document.getElementById('emojiPickerInline');
+    if (picker) picker.remove();
+}
+
+// === Toast Notifications ===
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type} toast-enter`;
+    toast.innerHTML = `<span class="toast-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span><span>${escapeHtml(message)}</span>`;
+    container.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('toast-visible'));
+    setTimeout(() => {
+        toast.classList.remove('toast-visible');
+        toast.classList.add('toast-exit');
+        setTimeout(() => toast.remove(), 400);
+    }, 3000);
+}
+
+// === Theme Toggle ===
+function toggleTheme() {
+    const body = document.body;
+    body.classList.toggle('light-theme');
+    const isLight = body.classList.contains('light-theme');
+    localStorage.setItem('crimecode_theme', isLight ? 'light' : 'dark');
+    const btn = document.getElementById('themeToggle');
+    if (btn) btn.textContent = isLight ? '☀️' : '🌙';
+}
+
+// Init theme from saved preference
+(function initTheme() {
+    const saved = localStorage.getItem('crimecode_theme');
+    if (saved === 'light') {
+        document.body.classList.add('light-theme');
+        const btn = document.getElementById('themeToggle');
+        if (btn) btn.textContent = '☀️';
+    }
+})();
+
+// === Mobile Menu ===
+function toggleMobileMenu() {
+    const nav = document.getElementById('mainNav');
+    const btn = document.getElementById('hamburgerBtn');
+    nav.classList.toggle('open');
+    btn.classList.toggle('active');
+}
+
+// Close mobile menu on link click
+document.addEventListener('click', (e) => {
+    if (e.target.closest('.main-nav .nav-link')) {
+        const nav = document.getElementById('mainNav');
+        const btn = document.getElementById('hamburgerBtn');
+        if (nav) nav.classList.remove('open');
+        if (btn) btn.classList.remove('active');
+    }
+});

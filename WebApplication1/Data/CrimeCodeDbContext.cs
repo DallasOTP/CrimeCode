@@ -20,6 +20,9 @@ public class CrimeCodeDbContext : DbContext
     public DbSet<UserRank> UserRanks => Set<UserRank>();
     public DbSet<ThreadTag> ThreadTags => Set<ThreadTag>();
     public DbSet<ShoutboxMessage> ShoutboxMessages => Set<ShoutboxMessage>();
+    public DbSet<PostReaction> PostReactions => Set<PostReaction>();
+    public DbSet<UserFollow> UserFollows => Set<UserFollow>();
+    public DbSet<PostAttachment> PostAttachments => Set<PostAttachment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,6 +35,26 @@ public class CrimeCodeDbContext : DbContext
         modelBuilder.Entity<PostLike>(e =>
         {
             e.HasIndex(pl => new { pl.UserId, pl.PostId }).IsUnique();
+        });
+
+        modelBuilder.Entity<PostReaction>(e =>
+        {
+            e.HasIndex(pr => new { pr.UserId, pr.PostId, pr.Emoji }).IsUnique();
+            e.HasOne(pr => pr.Post).WithMany(p => p.Reactions).HasForeignKey(pr => pr.PostId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(pr => pr.User).WithMany(u => u.Reactions).HasForeignKey(pr => pr.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserFollow>(e =>
+        {
+            e.HasIndex(uf => new { uf.FollowerId, uf.FollowingId }).IsUnique();
+            e.HasOne(uf => uf.Follower).WithMany(u => u.Following).HasForeignKey(uf => uf.FollowerId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(uf => uf.Following).WithMany(u => u.Followers).HasForeignKey(uf => uf.FollowingId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PostAttachment>(e =>
+        {
+            e.HasOne(pa => pa.Post).WithMany(p => p.Attachments).HasForeignKey(pa => pa.PostId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(pa => pa.Uploader).WithMany(u => u.Attachments).HasForeignKey(pa => pa.UploaderId).OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Post>(e =>

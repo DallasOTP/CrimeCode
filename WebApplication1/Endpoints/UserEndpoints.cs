@@ -11,11 +11,13 @@ public static class UserEndpoints
     {
         var group = app.MapGroup("/api/users");
 
-        group.MapGet("/{id:int}", async (int id, CrimeCodeDbContext db) =>
+        group.MapGet("/{id:int}", async (int id, CrimeCodeDbContext db, ClaimsPrincipal principal) =>
         {
             var user = await db.Users
                 .Include(u => u.Threads)
                 .Include(u => u.Posts)
+                .Include(u => u.Followers)
+                .Include(u => u.Following)
                 .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user is null) return Results.NotFound();
@@ -23,10 +25,14 @@ public static class UserEndpoints
             var ranks = await db.UserRanks.OrderByDescending(r => r.MinPosts).ToListAsync();
             var rank = LeaderboardEndpoints.GetRank(user, ranks);
 
+            var currentUserId = int.TryParse(principal.FindFirstValue(ClaimTypes.NameIdentifier), out var uid) ? uid : 0;
+            var followedByCurrentUser = currentUserId > 0 && user.Followers.Any(f => f.FollowerId == currentUserId);
+
             return Results.Ok(new UserProfile(user.Id, user.Username, user.AvatarUrl, user.Bio, user.Signature,
                 user.Role, user.CustomTitle, user.CreatedAt, user.LastSeenAt,
                 user.Threads.Count, user.Posts.Count, user.Credits, user.ReputationScore,
-                rank.Name, rank.Color, rank.Icon));
+                rank.Name, rank.Color, rank.Icon,
+                user.Status ?? "offline", user.Followers.Count, user.Following.Count, followedByCurrentUser));
         });
 
         group.MapGet("/{id:int}/posts", async (int id, CrimeCodeDbContext db) =>

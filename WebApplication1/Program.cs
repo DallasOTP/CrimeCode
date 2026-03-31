@@ -63,6 +63,11 @@ app.MapReputationEndpoints();
 app.MapMarketplaceEndpoints();
 app.MapShoutboxEndpoints();
 app.MapLeaderboardEndpoints();
+app.MapReactionsEndpoints();
+app.MapFollowEndpoints();
+app.MapAttachmentEndpoints();
+app.MapSearchEndpoints();
+app.MapStatusEndpoints();
 
 // Fallback to index.html for SPA routing
 app.MapFallbackToFile("index.html");

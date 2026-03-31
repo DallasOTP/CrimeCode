@@ -18,4 +18,6 @@ public class Post
 
     public ICollection<Post> Replies { get; set; } = [];
     public ICollection<PostLike> Likes { get; set; } = [];
+    public ICollection<PostReaction> Reactions { get; set; } = [];
+    public ICollection<PostAttachment> Attachments { get; set; } = [];
 }

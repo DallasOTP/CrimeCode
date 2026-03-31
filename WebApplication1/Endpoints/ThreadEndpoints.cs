@@ -89,8 +89,12 @@ public static class ThreadEndpoints
                 .Where(p => p.ThreadId == id && p.ParentPostId == null)
                 .Include(p => p.Author).ThenInclude(a => a.Posts)
                 .Include(p => p.Likes)
+                .Include(p => p.Reactions)
+                .Include(p => p.Attachments)
                 .Include(p => p.Replies).ThenInclude(r => r.Author).ThenInclude(a => a!.Posts)
                 .Include(p => p.Replies).ThenInclude(r => r.Likes)
+                .Include(p => p.Replies).ThenInclude(r => r.Reactions)
+                .Include(p => p.Replies).ThenInclude(r => r.Attachments)
                 .OrderBy(p => p.CreatedAt)
                 .ToListAsync();
 
@@ -188,6 +192,9 @@ public static class ThreadEndpoints
     private static PostDto MapPost(Post p, int currentUserId, List<UserRank> ranks)
     {
         var rank = LeaderboardEndpoints.GetRank(p.Author, ranks);
+        var reactions = p.Reactions.GroupBy(r => r.Emoji).ToDictionary(g => g.Key, g => g.Count());
+        var currentUserReactions = p.Reactions.Where(r => r.UserId == currentUserId).Select(r => r.Emoji).ToList();
+        var attachments = p.Attachments.Select(a => new AttachmentDto(a.Id, a.FileName, $"/uploads/attachments/{a.StoredPath}", a.ContentType, a.FileSizeBytes)).ToList();
         return new PostDto(
             p.Id, p.Content, p.Author.Username, p.AuthorId, p.Author.AvatarUrl,
             p.Author.Role, rank.Name, rank.Color, rank.Icon, p.Author.Signature,
@@ -195,6 +202,7 @@ public static class ThreadEndpoints
             p.CreatedAt, p.EditedAt, p.Likes.Count,
             p.Likes.Any(l => l.UserId == currentUserId),
             p.ParentPostId,
-            p.Replies.Select(r => MapPost(r, currentUserId, ranks)).ToList());
+            p.Replies.Select(r => MapPost(r, currentUserId, ranks)).ToList(),
+            reactions, currentUserReactions, attachments);
     }
 }

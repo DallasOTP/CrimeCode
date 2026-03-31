@@ -63,6 +63,8 @@ public static class AuthEndpoints
             var user = await db.Users
                 .Include(u => u.Threads)
                 .Include(u => u.Posts)
+                .Include(u => u.Followers)
+                .Include(u => u.Following)
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user is null) return Results.NotFound();
@@ -77,7 +79,8 @@ public static class AuthEndpoints
             return Results.Ok(new UserProfile(user.Id, user.Username, user.AvatarUrl, user.Bio, user.Signature,
                 user.Role, user.CustomTitle, user.CreatedAt, user.LastSeenAt,
                 user.Threads.Count, user.Posts.Count, user.Credits, user.ReputationScore,
-                rank.Name, rank.Color, rank.Icon));
+                rank.Name, rank.Color, rank.Icon, user.Status,
+                user.Followers.Count, user.Following.Count, false));
         }).RequireAuthorization();
     }
 }

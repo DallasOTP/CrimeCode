@@ -110,7 +110,7 @@ public static class LeaderboardEndpoints
             var result = users.Select(u =>
             {
                 var rank = GetRank(u, ranks);
-                return new OnlineUserDto(u.Id, u.Username, u.AvatarUrl, u.Role, rank.Name, rank.Color);
+                return new OnlineUserDto(u.Id, u.Username, u.AvatarUrl, u.Role, rank.Name, rank.Color, u.Status ?? "online");
             }).ToList();
 
             return Results.Ok(result);
