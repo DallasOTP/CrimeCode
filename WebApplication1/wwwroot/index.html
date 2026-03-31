@@ -376,9 +376,35 @@
                 <button class="btn btn-outline" onclick="navigate('myListings')" id="myListingsBtn" style="display:none">📦 I Miei Annunci</button>
                 <button class="btn btn-outline" onclick="navigate('dashboard'); showDashSection('orders'); return false;" id="myOrdersBtn" style="display:none">📋 I Miei Ordini</button>
             </div>
-            <div class="marketplace-filters" id="marketplaceFilters"></div>
-            <div class="marketplace-grid" id="marketplaceGrid"></div>
-            <div class="pagination" id="marketplacePagination"></div>
+            <div class="marketplace-layout">
+                <aside class="market-sidebar" id="marketSidebar">
+                    <div class="market-sidebar-title">Categorie</div>
+                    <div class="market-cat-list" id="marketCatList">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </aside>
+                <div class="market-main-content">
+                    <div class="market-filter-bar">
+                        <div class="market-type-pills">
+                            <button class="filter-btn active" id="filterAll" onclick="setMarketType(null)">Tutti</button>
+                            <button class="filter-btn" id="filterDigital" onclick="setMarketType('Digital')">🖥️ Digitale</button>
+                            <button class="filter-btn" id="filterPhysical" onclick="setMarketType('Physical')">📦 Fisico</button>
+                            <button class="filter-btn" id="filterService" onclick="setMarketType('Service')">⚙️ Servizio</button>
+                        </div>
+                        <div class="market-search-box">
+                            <input type="text" id="marketSearchInput" placeholder="Cerca annunci..." onkeydown="if(event.key==='Enter'){marketSearch=this.value;marketPage=1;loadMarketplace()}">
+                        </div>
+                        <select class="market-sort-select" id="marketSortSelect" onchange="marketSort=this.value;marketPage=1;loadMarketplace()">
+                            <option value="">Ordina per</option>
+                            <option value="newest">Più recenti</option>
+                            <option value="price_asc">Prezzo ↑</option>
+                            <option value="price_desc">Prezzo ↓</option>
+                        </select>
+                    </div>
+                    <div class="marketplace-grid" id="marketplaceGrid"></div>
+                    <div class="pagination" id="marketplacePagination"></div>
+                </div>
+            </div>
         </div>
 
         <!-- Listing Detail -->

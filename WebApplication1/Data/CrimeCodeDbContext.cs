@@ -263,11 +263,44 @@ public class CrimeCodeDbContext : DbContext
 
         // Seed categories (marketplace only)
         modelBuilder.Entity<Category>().HasData(
-            new Category { Id = 6, Name = "Marketplace", Description = "Il marketplace principale - acquista e vendi", Icon = "🛒", SortOrder = 0, IsMarketplace = true },
-            new Category { Id = 16, Name = "Servizi Digitali", Description = "Software, accounts e servizi digitali", Icon = "💼", SortOrder = 1, ParentId = 6, IsMarketplace = true },
-            new Category { Id = 17, Name = "Risorse & Guide", Description = "E-book, corsi e materiale formativo", Icon = "📚", SortOrder = 2, ParentId = 6, IsMarketplace = true },
-            new Category { Id = 18, Name = "Prodotti Fisici", Description = "Articoli fisici con spedizione", Icon = "📦", SortOrder = 3, ParentId = 6, IsMarketplace = true },
-            new Category { Id = 19, Name = "Servizi Custom", Description = "Servizi personalizzati su richiesta", Icon = "⚙️", SortOrder = 4, ParentId = 6, IsMarketplace = true }
+            // === Top-level categories ===
+            new Category { Id = 100, Name = "Cracking", Description = "Tools, configs, databases e account cracking", Icon = "🔓", SortOrder = 1, IsMarketplace = true },
+            new Category { Id = 200, Name = "Spamming", Description = "Scama, mailing, tools e SMTP", Icon = "📧", SortOrder = 2, IsMarketplace = true },
+            new Category { Id = 300, Name = "Carding", Description = "Bins, CC, generators e checkers", Icon = "💳", SortOrder = 3, IsMarketplace = true },
+            new Category { Id = 400, Name = "Hacking", Description = "Hacking tools e guide", Icon = "💻", SortOrder = 4, IsMarketplace = true },
+            new Category { Id = 500, Name = "Fake ID/Passport", Description = "Documenti e identità", Icon = "🪪", SortOrder = 5, IsMarketplace = true },
+            new Category { Id = 600, Name = "Resources", Description = "Software, configs e tools ufficiali", Icon = "📦", SortOrder = 6, IsMarketplace = true },
+
+            // --- Cracking subcategories ---
+            new Category { Id = 101, Name = "Bases", Description = "Database e combo list", Icon = "🗄️", SortOrder = 1, ParentId = 100, IsMarketplace = true },
+            new Category { Id = 102, Name = "Freebie", Description = "Risorse gratuite per cracking", Icon = "🆓", SortOrder = 2, ParentId = 100, IsMarketplace = true },
+            new Category { Id = 103, Name = "Pro", Description = "Risorse premium per cracking", Icon = "⭐", SortOrder = 3, ParentId = 100, IsMarketplace = true },
+            new Category { Id = 104, Name = "Tools", Description = "Software e tool per cracking", Icon = "🔧", SortOrder = 4, ParentId = 100, IsMarketplace = true },
+            new Category { Id = 105, Name = "Paid Tools", Description = "Tool premium a pagamento", Icon = "💰", SortOrder = 5, ParentId = 100, IsMarketplace = true },
+            new Category { Id = 106, Name = "Configs", Description = "Configurazioni per tool", Icon = "⚙️", SortOrder = 6, ParentId = 100, IsMarketplace = true },
+            new Category { Id = 107, Name = "Paid Configs", Description = "Configs premium a pagamento", Icon = "🔑", SortOrder = 7, ParentId = 100, IsMarketplace = true },
+            new Category { Id = 108, Name = "Account/Logs", Description = "Account e logs crackati", Icon = "📋", SortOrder = 8, ParentId = 100, IsMarketplace = true },
+
+            // --- Spamming subcategories ---
+            new Category { Id = 201, Name = "Scama/Letter", Description = "Scam pages e lettere", Icon = "📄", SortOrder = 1, ParentId = 200, IsMarketplace = true },
+            new Category { Id = 202, Name = "Mailing", Description = "Servizi e tool di mailing", Icon = "📬", SortOrder = 2, ParentId = 200, IsMarketplace = true },
+            new Category { Id = 203, Name = "Tools/Bots/Validators", Description = "Bot, validator e automation", Icon = "🤖", SortOrder = 3, ParentId = 200, IsMarketplace = true },
+            new Category { Id = 204, Name = "SMTP/Shell/CP/WP", Description = "SMTP, shell, cPanel, WordPress", Icon = "🖥️", SortOrder = 4, ParentId = 200, IsMarketplace = true },
+            new Category { Id = 205, Name = "SpamTube", Description = "YouTube spam e views", Icon = "📺", SortOrder = 5, ParentId = 200, IsMarketplace = true },
+
+            // --- Carding subcategories ---
+            new Category { Id = 301, Name = "Bins/CC", Description = "BIN list e carte di credito", Icon = "💳", SortOrder = 1, ParentId = 300, IsMarketplace = true },
+            new Category { Id = 302, Name = "Gen/Checkers", Description = "Generatori e checker", Icon = "🔄", SortOrder = 2, ParentId = 300, IsMarketplace = true },
+            new Category { Id = 303, Name = "Cardable Sites", Description = "Siti vulnerabili al carding", Icon = "🌐", SortOrder = 3, ParentId = 300, IsMarketplace = true },
+
+            // --- Hacking subcategories ---
+            new Category { Id = 401, Name = "General Hacking", Description = "Guide e tutorial di hacking", Icon = "📖", SortOrder = 1, ParentId = 400, IsMarketplace = true },
+            new Category { Id = 402, Name = "Hacking Tools", Description = "Tool e software per hacking", Icon = "🛠️", SortOrder = 2, ParentId = 400, IsMarketplace = true },
+
+            // --- Resources subcategories ---
+            new Category { Id = 601, Name = "Official Softwares", Description = "Software ufficiali e verificati", Icon = "⚙️", SortOrder = 1, ParentId = 600, IsMarketplace = true },
+            new Category { Id = 602, Name = "Configs", Description = "Configurazioni pronte all'uso", Icon = "📝", SortOrder = 2, ParentId = 600, IsMarketplace = true },
+            new Category { Id = 603, Name = "Tools", Description = "Tool e utility", Icon = "🔧", SortOrder = 3, ParentId = 600, IsMarketplace = true }
         );
     }
 }

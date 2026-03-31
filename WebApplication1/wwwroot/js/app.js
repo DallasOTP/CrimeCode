@@ -1312,6 +1312,8 @@ let marketType = null;
 let marketCategory = null;
 let marketSearch = '';
 let marketPage = 1;
+let marketSort = '';
+let marketCategoriesCache = null;
 
 async function checkVendorStatus() {
     if (!currentUser) return false;
@@ -1322,10 +1324,54 @@ async function checkVendorStatus() {
     } catch { return false; }
 }
 
+function setMarketType(type) {
+    marketType = type;
+    marketPage = 1;
+    document.querySelectorAll('.market-type-pills .filter-btn').forEach(b => b.classList.remove('active'));
+    const id = type ? `filter${type.charAt(0).toUpperCase() + type.slice(1)}` : 'filterAll';
+    const el = document.getElementById(id);
+    if (el) el.classList.add('active');
+    loadMarketplace();
+}
+
+function setMarketCategory(catId) {
+    marketCategory = catId;
+    marketPage = 1;
+    document.querySelectorAll('.market-cat-item').forEach(el => el.classList.remove('active'));
+    const active = document.querySelector(`.market-cat-item[data-cat="${catId || 'all'}"]`);
+    if (active) active.classList.add('active');
+    loadMarketplace();
+}
+
+async function loadMarketCategories() {
+    const container = document.getElementById('marketCatList');
+    if (!container) return;
+    try {
+        const cats = marketCategoriesCache || await api('/categories');
+        marketCategoriesCache = cats;
+        let html = `<div class="market-cat-item active" data-cat="all" onclick="setMarketCategory(null)">📋 Tutte le categorie</div>`;
+        for (const cat of cats) {
+            if (!cat.isMarketplace) continue;
+            html += `<div class="market-cat-item parent" data-cat="${cat.id}" onclick="setMarketCategory(${cat.id})">${cat.icon} ${escapeHtml(cat.name)}</div>`;
+            if (cat.subCategories?.length) {
+                for (const sub of cat.subCategories) {
+                    html += `<div class="market-cat-item child" data-cat="${sub.id}" onclick="setMarketCategory(${sub.id})">${sub.icon} ${escapeHtml(sub.name)}</div>`;
+                }
+            }
+        }
+        container.innerHTML = html;
+    } catch {
+        container.innerHTML = '<div class="empty-state">Errore categorie</div>';
+    }
+}
+
 async function loadMarketplace() {
     const grid = document.getElementById('marketplaceGrid');
     grid.innerHTML = '<div class="loading">Caricamento</div>';
     try {
+        // Load categories sidebar (only first time)
+        if (!marketCategoriesCache) loadMarketCategories();
+
         // Load stats
         const stats = await api('/marketplace/stats');
         const statsEl = document.getElementById('marketStats');
@@ -1340,47 +1386,45 @@ async function loadMarketplace() {
         if (marketType) params.set('type', marketType);
         if (marketCategory) params.set('categoryId', marketCategory);
         if (marketSearch) params.set('search', marketSearch);
+        if (marketSort) params.set('sort', marketSort);
         params.set('page', marketPage);
 
         const data = await api(`/marketplace?${params}`);
-        
-        const filtersContainer = document.getElementById('marketplaceFilters');
-        filtersContainer.innerHTML = `
-            <div class="market-filter-row">
-                <button class="filter-btn ${!marketType ? 'active' : ''}" onclick="marketType=null;marketPage=1;loadMarketplace()">Tutti</button>
-                <button class="filter-btn ${marketType==='Digital' ? 'active' : ''}" onclick="marketType='Digital';marketPage=1;loadMarketplace()">🖥️ Digitale</button>
-                <button class="filter-btn ${marketType==='Physical' ? 'active' : ''}" onclick="marketType='Physical';marketPage=1;loadMarketplace()">📦 Fisico</button>
-                <button class="filter-btn ${marketType==='Service' ? 'active' : ''}" onclick="marketType='Service';marketPage=1;loadMarketplace()">⚙️ Servizio</button>
-            </div>
-            <div class="market-search-row">
-                <input type="text" id="marketSearchInput" placeholder="Cerca annunci..." value="${escapeHtml(marketSearch)}" onkeydown="if(event.key==='Enter'){marketSearch=this.value;marketPage=1;loadMarketplace()}">
-                <button class="btn btn-sm btn-primary" onclick="marketSearch=document.getElementById('marketSearchInput').value;marketPage=1;loadMarketplace()">🔍</button>
-            </div>`;
-
         const listings = data.listings || data;
         if (!listings || listings.length === 0) {
             grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🛒</div><p>Nessun annuncio trovato</p></div>';
             return;
         }
 
-        grid.innerHTML = listings.map(l => `<div class="marketplace-card" onclick="navigate('listingDetail',{id:${l.id}})">
-            ${l.imageUrl ? `<div class="marketplace-card-img"><img src="${escapeHtml(l.imageUrl)}" alt=""></div>` : ''}
-            <div class="marketplace-card-header">
-                <span class="marketplace-card-title">${escapeHtml(l.title)}</span>
-                <span class="marketplace-card-price">${l.priceCrypto} ${escapeHtml(l.currency)}</span>
-            </div>
-            <div class="marketplace-card-tags">
-                <span class="marketplace-card-type ${l.type.toLowerCase()}">${l.type === 'Digital' ? '🖥️' : l.type === 'Physical' ? '📦' : '⚙️'} ${escapeHtml(l.type)}</span>
-                <span class="marketplace-card-delivery">${l.deliveryType === 'Instant' ? '⚡ Istantaneo' : l.deliveryType === 'Manual' ? '🤝 Manuale' : '🚚 Spedizione'}</span>
-            </div>
-            <div class="marketplace-card-desc">${escapeHtml(l.description).substring(0, 120)}${l.description.length > 120 ? '...' : ''}</div>
-            <div class="marketplace-card-footer">
-                <span class="marketplace-card-seller" onclick="event.stopPropagation();navigate('vendorProfile',{id:${l.sellerId}})">
-                    ${l.isVendor ? '✅' : ''} ${escapeHtml(l.sellerName)}
-                </span>
-                <span class="marketplace-card-stock">${l.stock > 0 ? `📦 ${l.stock} disp.` : '❌ Esaurito'}</span>
-            </div>
-        </div>`).join('');
+        grid.innerHTML = listings.map(l => {
+            const typeClass = (l.type || '').toLowerCase();
+            const typeIcon = l.type === 'Digital' ? '🖥️' : l.type === 'Physical' ? '📦' : '⚙️';
+            const deliveryText = l.deliveryType === 'Instant' ? '⚡ Istantaneo' : l.deliveryType === 'Manual' ? '🤝 Manuale' : '🚚 Spedizione';
+            const stockHtml = l.stock > 0
+                ? `<span class="marketplace-card-stock">📦 ${l.stock} disp.</span>`
+                : `<span class="marketplace-card-stock out">❌ Esaurito</span>`;
+            return `<div class="marketplace-card" onclick="navigate('listingDetail',{id:${l.id}})">
+                ${l.imageUrl ? `<div class="marketplace-card-img"><img src="${escapeHtml(l.imageUrl)}" alt="" loading="lazy"><span class="marketplace-card-badge ${typeClass}">${typeIcon} ${escapeHtml(l.type)}</span></div>` : ''}
+                <div class="marketplace-card-body">
+                    <div class="marketplace-card-header">
+                        <span class="marketplace-card-title">${escapeHtml(l.title)}</span>
+                        <span class="marketplace-card-price">${l.priceCrypto} ${escapeHtml(l.currency)}</span>
+                    </div>
+                    <div class="marketplace-card-tags">
+                        ${!l.imageUrl ? `<span class="marketplace-card-type ${typeClass}">${typeIcon} ${escapeHtml(l.type)}</span>` : ''}
+                        <span class="marketplace-card-delivery">${deliveryText}</span>
+                        ${l.categoryName ? `<span class="marketplace-card-category">${escapeHtml(l.categoryName)}</span>` : ''}
+                    </div>
+                    <div class="marketplace-card-desc">${escapeHtml(l.description).substring(0, 120)}${l.description.length > 120 ? '...' : ''}</div>
+                </div>
+                <div class="marketplace-card-footer">
+                    <span class="marketplace-card-seller" onclick="event.stopPropagation();navigate('vendorProfile',{id:${l.sellerId}})">
+                        ${l.isVendor ? '✅' : '👤'} ${escapeHtml(l.sellerName)}
+                    </span>
+                    ${stockHtml}
+                </div>
+            </div>`;
+        }).join('');
 
         // Pagination
         const pag = document.getElementById('marketplacePagination');
@@ -1632,17 +1676,20 @@ async function loadVendorProfile(id) {
             </div>
             <h3 style="margin-top:1.5rem">Annunci di ${escapeHtml(v.username)}</h3>
             <div class="marketplace-grid">${data.listings.length === 0 ? '<p>Nessun annuncio attivo</p>' :
-                data.listings.map(l => `<div class="marketplace-card" onclick="navigate('listingDetail',{id:${l.id}})">
-                    ${l.imageUrl ? `<div class="marketplace-card-img"><img src="${escapeHtml(l.imageUrl)}" alt=""></div>` : ''}
-                    <div class="marketplace-card-header">
-                        <span class="marketplace-card-title">${escapeHtml(l.title)}</span>
-                        <span class="marketplace-card-price">${l.priceCrypto} ${escapeHtml(l.currency)}</span>
+                data.listings.map(l => {
+                    const typeClass = (l.type || '').toLowerCase();
+                    const typeIcon = l.type === 'Digital' ? '🖥️' : l.type === 'Physical' ? '📦' : '⚙️';
+                    return `<div class="marketplace-card" onclick="navigate('listingDetail',{id:${l.id}})">
+                    ${l.imageUrl ? `<div class="marketplace-card-img"><img src="${escapeHtml(l.imageUrl)}" alt="" loading="lazy"><span class="marketplace-card-badge ${typeClass}">${typeIcon} ${escapeHtml(l.type)}</span></div>` : ''}
+                    <div class="marketplace-card-body">
+                        <div class="marketplace-card-header">
+                            <span class="marketplace-card-title">${escapeHtml(l.title)}</span>
+                            <span class="marketplace-card-price">${l.priceCrypto} ${escapeHtml(l.currency)}</span>
+                        </div>
+                        <div class="marketplace-card-desc">${escapeHtml(l.description).substring(0, 100)}</div>
                     </div>
-                    <div class="marketplace-card-tags">
-                        <span class="marketplace-card-type ${l.type.toLowerCase()}">${escapeHtml(l.type)}</span>
-                    </div>
-                    <div class="marketplace-card-desc">${escapeHtml(l.description).substring(0, 100)}</div>
-                </div>`).join('')}
+                </div>`;
+                }).join('')}}
             </div>`;
     } catch {
         container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore</p></div>';
