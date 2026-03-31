@@ -1,114 +1,448 @@
-// === CrimeCode Market — Frontend Application ===
-// === DASHBOARD NEXUS ===
+// === CrimeMarket — Frontend Application ===
+
+// === DASHBOARD SYSTEM ===
+let dashWallets = {};
+let dashCurrentSection = 'account';
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Dashboard sidebar navigation
-    const sidebar = document.querySelector('.dashboard-sidebar');
-    if (sidebar) {
-        sidebar.addEventListener('click', function (e) {
-            const li = e.target.closest('li[data-section]');
-            if (!li) return;
-            document.querySelectorAll('.dashboard-menu li').forEach(x => x.classList.remove('active'));
-            li.classList.add('active');
-            showDashboardSection(li.dataset.section);
-        });
-    }
-    // Avatar upload preview
-    const avatarInput = document.getElementById('dashboardAvatarFile');
-    if (avatarInput) {
-        avatarInput.addEventListener('change', function () {
-            const file = this.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                document.getElementById('dashboardAvatarImg').src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-    // Avatar upload submit
-    const avatarForm = document.getElementById('dashboardAvatarForm');
-    if (avatarForm) {
-        avatarForm.addEventListener('submit', async function (e) {
+    // Dashboard sidebar navigation (delegated)
+    const menu = document.getElementById('dashboardMenu');
+    if (menu) {
+        menu.addEventListener('click', function (e) {
+            const link = e.target.closest('.dash-link');
+            if (!link || link.classList.contains('dash-logout')) return;
             e.preventDefault();
-            const fileInput = document.getElementById('dashboardAvatarFile');
-            if (!fileInput.files.length) return showToast('Seleziona un file', 'error');
-            const formData = new FormData();
-            formData.append('avatar', fileInput.files[0]);
-            try {
-                await apiRaw('/avatar/upload', { method: 'POST', body: formData });
-                showToast('Avatar aggiornato!', 'success');
-                refreshMe();
-            } catch (err) {
-                showToast(err.data?.error || 'Errore upload avatar', 'error');
-            }
+            menu.querySelectorAll('.dash-link').forEach(a => a.classList.remove('active'));
+            link.classList.add('active');
+            const section = link.dataset.section;
+            if (section) showDashSection(section);
         });
     }
-    // Ticket modal open/close
-    const openTicketBtn = document.getElementById('openTicketBtn');
-    if (openTicketBtn) openTicketBtn.onclick = () => document.getElementById('modalTicket').classList.add('active');
-    const closeTicketBtn = document.getElementById('closeTicketModal');
-    if (closeTicketBtn) closeTicketBtn.onclick = () => document.getElementById('modalTicket').classList.remove('active');
-    // Ticket submit
-    const ticketForm = document.getElementById('ticketForm');
-    if (ticketForm) {
-        ticketForm.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const subject = document.getElementById('ticketSubject').value.trim();
-            const message = document.getElementById('ticketMessage').value.trim();
-            if (!subject || !message) return showToast('Compila tutti i campi', 'error');
-            try {
-                await api('/tickets', { method: 'POST', body: JSON.stringify({ subject, message }) });
-                showToast('Ticket inviato!', 'success');
-                document.getElementById('modalTicket').classList.remove('active');
-                loadTicketsDashboard();
-            } catch (err) {
-                showToast(err.data?.error || 'Errore invio ticket', 'error');
-            }
-        });
-    }
-    // Carica tickets all'apertura dashboard
-    if (document.getElementById('dashboardTicketsTable')) loadTicketsDashboard();
-    // Wallet connect/disconnect (stub)
-    document.querySelectorAll('.wallet-connect-btn').forEach(btn => {
-        btn.onclick = function () {
-            showToast('Funzionalità in arrivo: integrazione wallet ' + btn.dataset.wallet, 'info');
-        };
-    });
+    // Withdraw currency change → show balance
+    const wCur = document.getElementById('dashWithdrawCurrency');
+    if (wCur) wCur.addEventListener('change', updateWithdrawBalance);
 });
 
-function showDashboardSection(section) {
-    document.querySelectorAll('.dashboard-main-section').forEach(s => s.style.display = 'none');
-    const el = document.getElementById('dashboardSection_' + section);
+function showDashSection(section) {
+    dashCurrentSection = section;
+    document.querySelectorAll('.dash-section').forEach(s => s.style.display = 'none');
+    const el = document.getElementById('dashSection-' + section);
     if (el) el.style.display = '';
+    // Load data for section
+    if (section === 'account') loadDashAccount();
+    if (section === 'wallet-internal') loadDashWallet();
+    if (section === 'deposit') { /* static form, no load needed */ }
+    if (section === 'withdraw') { loadDashWalletQuiet(); updateWithdrawBalance(); }
+    if (section === 'orders') loadDashOrders('buying');
+    if (section === 'messenger') loadDashMessenger();
+    if (section === 'tickets') loadDashTickets();
+    if (section === 'block') loadDashBlockedUsers();
 }
 
-// Carica tickets nella dashboard
-async function loadTicketsDashboard() {
-    const table = document.getElementById('dashboardTicketsTable');
-    if (!table) return;
-    table.innerHTML = '<tr><td colspan="4">Caricamento...</td></tr>';
-    try {
-        const tickets = await api('/tickets');
-        if (!tickets.length) {
-            table.innerHTML = '<tr><td colspan="4">Nessun ticket</td></tr>';
-            return;
+function initDashboard() {
+    showDashSection('account');
+    loadDashSidebar();
+}
+
+function loadDashSidebar() {
+    if (!currentUser) return;
+    const nameEl = document.getElementById('dashUsernameDisplay');
+    const roleEl = document.getElementById('dashRoleDisplay');
+    const avEl = document.getElementById('dashAvatarDisplay');
+    if (nameEl) nameEl.textContent = currentUser.username || 'User';
+    if (roleEl) roleEl.textContent = currentUser.isVendor ? 'Vendor' : 'Member';
+    if (avEl) {
+        if (currentUser.avatar) {
+            avEl.style.backgroundImage = 'url(' + currentUser.avatar + ')';
+            avEl.textContent = '';
+        } else {
+            avEl.textContent = (currentUser.username || '?')[0].toUpperCase();
         }
-        table.innerHTML = tickets.map(t => `
-            <tr onclick="showTicketDetail(${t.id})" style="cursor:pointer">
-                <td>${escapeHtml(t.subject)}</td>
-                <td>${new Date(t.createdAt).toLocaleDateString('it-IT')}</td>
-                <td class="ticket-status-${t.status.toLowerCase()}">${escapeHtml(t.status)}</td>
-                <td>Vedi</td>
-            </tr>
-        `).join('');
-    } catch {
-        table.innerHTML = '<tr><td colspan="4">Errore caricamento</td></tr>';
     }
 }
 
-// Mostra dettaglio ticket (stub: solo alert, backend da completare)
-function showTicketDetail(id) {
-    showToast('Visualizzazione dettagli ticket in arrivo', 'info');
+// === MY ACCOUNT ===
+function loadDashAccount() {
+    if (!currentUser) return;
+    const el = id => document.getElementById(id);
+    if (el('dashEditUsername')) el('dashEditUsername').value = currentUser.username || '';
+    if (el('dashEditEmail')) el('dashEditEmail').value = currentUser.email || '';
+    if (el('dashEditBio')) el('dashEditBio').value = currentUser.bio || '';
+    if (el('dashEditWebsite')) el('dashEditWebsite').value = currentUser.website || '';
+    if (el('dashEditLocation')) el('dashEditLocation').value = currentUser.location || '';
+    if (el('dashEditJabber')) el('dashEditJabber').value = currentUser.jabber || '';
+    const avBig = el('dashAvatarBig');
+    if (avBig) {
+        if (currentUser.avatar) {
+            avBig.style.backgroundImage = 'url(' + currentUser.avatar + ')';
+            avBig.textContent = '';
+        } else {
+            avBig.textContent = (currentUser.username || '?')[0].toUpperCase();
+        }
+    }
+}
+
+async function saveDashAccountInfo(e) {
+    e.preventDefault();
+    const msgEl = document.getElementById('dashAccountMsg');
+    const body = {
+        username: document.getElementById('dashEditUsername').value.trim(),
+        email: document.getElementById('dashEditEmail').value.trim(),
+        bio: document.getElementById('dashEditBio').value.trim(),
+        website: document.getElementById('dashEditWebsite').value.trim(),
+        location: document.getElementById('dashEditLocation').value.trim(),
+        jabber: document.getElementById('dashEditJabber').value.trim()
+    };
+    try {
+        await api('/auth/update-profile', { method: 'PUT', body: JSON.stringify(body) });
+        if (msgEl) { msgEl.textContent = 'Saved!'; msgEl.style.color = '#0f0'; }
+        showToast('Profile updated!', 'success');
+        await refreshMe();
+        loadDashSidebar();
+    } catch (err) {
+        const msg = err.data?.error || 'Error saving profile';
+        if (msgEl) { msgEl.textContent = msg; msgEl.style.color = '#f44'; }
+        showToast(msg, 'error');
+    }
+}
+
+// === INTERNAL WALLET ===
+async function loadDashWallet() {
+    const ov = document.getElementById('dashWalletOverview');
+    const tx = document.getElementById('dashTxList');
+    if (ov) ov.innerHTML = '<div class="loading">Loading wallets...</div>';
+    try {
+        const wallets = await api('/wallet');
+        dashWallets = {};
+        if (!wallets || !wallets.length) {
+            // Init default wallets
+            for (const c of ['BTC','ETH','USDT','LTC','XMR']) {
+                try { await api('/wallet/init?currency=' + c, { method: 'POST' }); } catch {}
+            }
+            const w2 = await api('/wallet');
+            (w2 || []).forEach(w => dashWallets[w.currency] = w);
+        } else {
+            wallets.forEach(w => dashWallets[w.currency] = w);
+        }
+        renderDashWalletOverview(ov);
+    } catch (err) {
+        if (ov) ov.innerHTML = '<div class="dash-muted">Error loading wallets</div>';
+    }
+    // Load transactions
+    try {
+        const txs = await api('/wallet/transactions');
+        renderDashTxList(tx, txs);
+    } catch {
+        if (tx) tx.innerHTML = '<div class="dash-muted">No transactions</div>';
+    }
+}
+
+async function loadDashWalletQuiet() {
+    try {
+        const wallets = await api('/wallet');
+        dashWallets = {};
+        (wallets || []).forEach(w => dashWallets[w.currency] = w);
+    } catch {}
+}
+
+function renderDashWalletOverview(container) {
+    if (!container) return;
+    const currencies = ['BTC','ETH','USDT','LTC','XMR'];
+    const icons = { BTC:'&#x20BF;', ETH:'\u039E', USDT:'$', LTC:'\u0141', XMR:'\u2694' };
+    container.innerHTML = '<div class="dash-wallet-grid">' +
+        currencies.map(c => {
+            const w = dashWallets[c];
+            const bal = w ? parseFloat(w.balance || 0).toFixed(8) : '0.00000000';
+            return '<div class="dash-wallet-card">' +
+                '<div class="dash-wallet-icon">' + (icons[c]||c) + '</div>' +
+                '<div class="dash-wallet-cur">' + c + '</div>' +
+                '<div class="dash-wallet-bal">' + bal + '</div>' +
+            '</div>';
+        }).join('') +
+    '</div>';
+}
+
+function renderDashTxList(container, txs) {
+    if (!container) return;
+    if (!txs || !txs.length) {
+        container.innerHTML = '<div class="dash-muted">No transactions yet</div>';
+        return;
+    }
+    container.innerHTML = txs.slice(0, 20).map(t => {
+        const cls = t.type === 'deposit' ? 'tx-in' : 'tx-out';
+        return '<div class="dash-tx-item ' + cls + '">' +
+            '<span class="dash-tx-type">' + (t.type === 'deposit' ? '&#x2B06;' : '&#x2B07;') + ' ' + t.type + '</span>' +
+            '<span class="dash-tx-amount">' + parseFloat(t.amount).toFixed(8) + ' ' + escapeHtml(t.currency) + '</span>' +
+            '<span class="dash-tx-date">' + new Date(t.createdAt).toLocaleDateString() + '</span>' +
+        '</div>';
+    }).join('');
+}
+
+// === DEPOSIT ===
+async function dashDoDeposit(e) {
+    e.preventDefault();
+    const currency = document.getElementById('dashDepositCurrency').value;
+    const amount = parseFloat(document.getElementById('dashDepositAmount').value);
+    const txId = document.getElementById('dashDepositTxId').value.trim();
+    if (!amount || amount <= 0) return showToast('Invalid amount', 'error');
+    if (!txId) return showToast('TX ID is required', 'error');
+    try {
+        await api('/wallet/deposit', {
+            method: 'POST',
+            body: JSON.stringify({ currency, amount, txId })
+        });
+        showToast('Deposit submitted for ' + amount + ' ' + currency, 'success');
+        document.getElementById('dashDepositForm').reset();
+    } catch (err) {
+        showToast(err.data?.error || 'Deposit failed', 'error');
+    }
+}
+
+// === WITHDRAW ===
+function updateWithdrawBalance() {
+    const cur = document.getElementById('dashWithdrawCurrency')?.value;
+    const el = document.getElementById('dashWithdrawBalance');
+    if (!el || !cur) return;
+    const w = dashWallets[cur];
+    el.textContent = w ? parseFloat(w.balance || 0).toFixed(8) + ' ' + cur : '0.00000000 ' + cur;
+}
+
+async function dashDoWithdraw(e) {
+    e.preventDefault();
+    const currency = document.getElementById('dashWithdrawCurrency').value;
+    const amount = parseFloat(document.getElementById('dashWithdrawAmount').value);
+    const walletAddress = document.getElementById('dashWithdrawAddress').value.trim();
+    if (!amount || amount <= 0) return showToast('Invalid amount', 'error');
+    if (!walletAddress) return showToast('Wallet address required', 'error');
+    try {
+        await api('/wallet/withdraw', {
+            method: 'POST',
+            body: JSON.stringify({ currency, amount, walletAddress })
+        });
+        showToast('Withdrawal of ' + amount + ' ' + currency + ' submitted', 'success');
+        document.getElementById('dashWithdrawForm').reset();
+        loadDashWalletQuiet();
+        updateWithdrawBalance();
+    } catch (err) {
+        showToast(err.data?.error || 'Withdrawal failed', 'error');
+    }
+}
+
+// === ORDERS ===
+async function loadDashOrders(type) {
+    const list = document.getElementById('dashOrdersList');
+    if (!list) return;
+    // update tabs
+    document.querySelectorAll('.dash-tabs .dash-tab').forEach(t => t.classList.remove('active'));
+    const activeTab = Array.from(document.querySelectorAll('.dash-tabs .dash-tab')).find(t => t.textContent.toLowerCase().includes(type));
+    if (activeTab) activeTab.classList.add('active');
+    list.innerHTML = '<div class="loading">Loading...</div>';
+    try {
+        const orders = await api('/orders/my?type=' + type);
+        if (!orders || !orders.length) {
+            list.innerHTML = '<div class="dash-muted">No ' + type + ' orders</div>';
+            return;
+        }
+        list.innerHTML = orders.map(o =>
+            '<div class="dash-order-item" onclick="navigate(\'orderDetail\', ' + o.id + ')">' +
+                '<div class="dash-order-title">' + escapeHtml(o.listingTitle || 'Order #' + o.id) + '</div>' +
+                '<div class="dash-order-meta">' +
+                    '<span class="dash-order-status status-' + (o.status||'').toLowerCase() + '">' + escapeHtml(o.status) + '</span>' +
+                    '<span>' + parseFloat(o.totalPrice || 0).toFixed(8) + ' ' + escapeHtml(o.currency || 'BTC') + '</span>' +
+                    '<span>' + new Date(o.createdAt).toLocaleDateString() + '</span>' +
+                '</div>' +
+            '</div>'
+        ).join('');
+    } catch {
+        list.innerHTML = '<div class="dash-muted">Error loading orders</div>';
+    }
+}
+
+// === MESSENGER ===
+async function loadDashMessenger() {
+    const el = document.getElementById('dashMessengerContent');
+    if (!el) return;
+    el.innerHTML = '<div class="loading">Loading conversations...</div>';
+    try {
+        const convs = await api('/messages/conversations');
+        if (!convs || !convs.length) {
+            el.innerHTML = '<div class="dash-muted">No conversations yet</div>';
+            return;
+        }
+        el.innerHTML = convs.map(c =>
+            '<div class="dash-conv-item" onclick="navigate(\'messages\')">' +
+                '<div class="dash-conv-user">' + escapeHtml(c.otherUser || c.username || 'User') + '</div>' +
+                '<div class="dash-conv-preview">' + escapeHtml((c.lastMessage || '').substring(0, 80)) + '</div>' +
+                '<div class="dash-conv-date">' + new Date(c.updatedAt || c.createdAt).toLocaleDateString() + '</div>' +
+            '</div>'
+        ).join('');
+    } catch {
+        el.innerHTML = '<div class="dash-muted">Error loading messages</div>';
+    }
+}
+
+// === TICKETS ===
+async function loadDashTickets() {
+    const el = document.getElementById('dashTicketsList');
+    if (!el) return;
+    el.innerHTML = '<div class="loading">Loading tickets...</div>';
+    try {
+        const tickets = await api('/tickets/my');
+        if (!tickets || !tickets.length) {
+            el.innerHTML = '<div class="dash-muted">No tickets. Click "+ New Ticket" to create one.</div>';
+            return;
+        }
+        el.innerHTML = tickets.map(t =>
+            '<div class="dash-ticket-item" onclick="loadDashTicketDetail(' + t.id + ')">' +
+                '<div class="dash-ticket-subject">' + escapeHtml(t.subject) + '</div>' +
+                '<div class="dash-ticket-meta">' +
+                    '<span class="dash-ticket-status status-' + (t.status||'').toLowerCase() + '">' + escapeHtml(t.status) + '</span>' +
+                    '<span>' + new Date(t.createdAt).toLocaleDateString() + '</span>' +
+                '</div>' +
+            '</div>'
+        ).join('');
+    } catch {
+        el.innerHTML = '<div class="dash-muted">Error loading tickets</div>';
+    }
+}
+
+function showDashNewTicketForm() {
+    const el = document.getElementById('dashTicketsList');
+    if (!el) return;
+    el.innerHTML =
+        '<div class="dash-card">' +
+            '<h3>New Support Ticket</h3>' +
+            '<form onsubmit="submitDashTicket(event)">' +
+                '<div class="input-group"><label>Subject</label><input type="text" id="dashTicketSubject" required maxlength="200"></div>' +
+                '<div class="input-group"><label>Message</label><textarea id="dashTicketMessage" rows="5" required maxlength="2000"></textarea></div>' +
+                '<div class="dash-form-actions">' +
+                    '<button type="submit" class="btn btn-primary">Submit Ticket</button>' +
+                    '<button type="button" class="btn btn-outline" onclick="loadDashTickets()">Cancel</button>' +
+                '</div>' +
+            '</form>' +
+        '</div>';
+}
+
+async function submitDashTicket(e) {
+    e.preventDefault();
+    const subject = document.getElementById('dashTicketSubject').value.trim();
+    const message = document.getElementById('dashTicketMessage').value.trim();
+    if (!subject || !message) return showToast('Fill in all fields', 'error');
+    try {
+        await api('/tickets', { method: 'POST', body: JSON.stringify({ subject, message }) });
+        showToast('Ticket submitted!', 'success');
+        loadDashTickets();
+    } catch (err) {
+        showToast(err.data?.error || 'Error creating ticket', 'error');
+    }
+}
+
+async function loadDashTicketDetail(id) {
+    const el = document.getElementById('dashTicketsList');
+    if (!el) return;
+    el.innerHTML = '<div class="loading">Loading ticket...</div>';
+    try {
+        const t = await api('/tickets/' + id);
+        let html = '<div class="dash-card">' +
+            '<div class="dash-ticket-detail-header">' +
+                '<button class="btn btn-outline btn-sm" onclick="loadDashTickets()">&larr; Back</button>' +
+                '<h3>' + escapeHtml(t.subject) + '</h3>' +
+                '<span class="dash-ticket-status status-' + (t.status||'').toLowerCase() + '">' + escapeHtml(t.status) + '</span>' +
+            '</div>' +
+            '<div class="dash-ticket-messages">';
+        if (t.replies && t.replies.length) {
+            html += t.replies.map(r =>
+                '<div class="dash-ticket-msg ' + (r.isAdmin ? 'msg-admin' : 'msg-user') + '">' +
+                    '<div class="dash-ticket-msg-header"><strong>' + escapeHtml(r.author || (r.isAdmin ? 'Support' : 'You')) + '</strong> <span>' + new Date(r.createdAt).toLocaleString() + '</span></div>' +
+                    '<div class="dash-ticket-msg-body">' + escapeHtml(r.message) + '</div>' +
+                '</div>'
+            ).join('');
+        } else {
+            html += '<div class="dash-ticket-msg msg-user"><div class="dash-ticket-msg-body">' + escapeHtml(t.message || '') + '</div></div>';
+        }
+        html += '</div>';
+        if (t.status !== 'closed') {
+            html += '<form onsubmit="replyDashTicket(event, ' + id + ')" class="dash-ticket-reply">' +
+                '<textarea id="dashTicketReply" rows="3" required placeholder="Type your reply..."></textarea>' +
+                '<div class="dash-form-actions">' +
+                    '<button type="submit" class="btn btn-primary btn-sm">Reply</button>' +
+                    '<button type="button" class="btn btn-danger btn-sm" onclick="closeDashTicket(' + id + ')">Close Ticket</button>' +
+                '</div>' +
+            '</form>';
+        }
+        html += '</div>';
+        el.innerHTML = html;
+    } catch {
+        el.innerHTML = '<div class="dash-muted">Error loading ticket</div>';
+    }
+}
+
+async function replyDashTicket(e, id) {
+    e.preventDefault();
+    const message = document.getElementById('dashTicketReply').value.trim();
+    if (!message) return;
+    try {
+        await api('/tickets/' + id + '/reply', { method: 'POST', body: JSON.stringify({ message }) });
+        showToast('Reply sent', 'success');
+        loadDashTicketDetail(id);
+    } catch (err) {
+        showToast(err.data?.error || 'Error sending reply', 'error');
+    }
+}
+
+async function closeDashTicket(id) {
+    try {
+        await api('/tickets/' + id + '/close', { method: 'PUT' });
+        showToast('Ticket closed', 'success');
+        loadDashTickets();
+    } catch (err) {
+        showToast(err.data?.error || 'Error closing ticket', 'error');
+    }
+}
+
+// === BLOCK USERS ===
+async function loadDashBlockedUsers() {
+    const el = document.getElementById('dashBlockedList');
+    if (!el) return;
+    try {
+        const blocked = await api('/users/blocked');
+        if (!blocked || !blocked.length) {
+            el.innerHTML = '<p class="dash-muted">No blocked users</p>';
+            return;
+        }
+        el.innerHTML = blocked.map(u =>
+            '<div class="dash-blocked-item">' +
+                '<span>' + escapeHtml(u.username) + '</span>' +
+                '<button class="btn btn-outline btn-sm" onclick="dashUnblockUser(\'' + escapeHtml(u.username) + '\')">Unblock</button>' +
+            '</div>'
+        ).join('');
+    } catch {
+        el.innerHTML = '<p class="dash-muted">No blocked users</p>';
+    }
+}
+
+async function dashBlockUser() {
+    const input = document.getElementById('dashBlockUsername');
+    const username = input?.value.trim();
+    if (!username) return showToast('Enter a username', 'error');
+    try {
+        await api('/users/block', { method: 'POST', body: JSON.stringify({ username }) });
+        showToast(username + ' blocked', 'success');
+        input.value = '';
+        loadDashBlockedUsers();
+    } catch (err) {
+        showToast(err.data?.error || 'Error blocking user', 'error');
+    }
+}
+
+async function dashUnblockUser(username) {
+    try {
+        await api('/users/unblock', { method: 'POST', body: JSON.stringify({ username }) });
+        showToast(username + ' unblocked', 'success');
+        loadDashBlockedUsers();
+    } catch (err) {
+        showToast(err.data?.error || 'Error unblocking user', 'error');
+    }
 }
 
 const API = '/api';
@@ -320,6 +654,7 @@ function navigate(page, params = {}) {
             break;
         case 'dashboard':
             document.getElementById('pageDashboard').style.display = '';
+            initDashboard();
             break;
         case 'profile':
             document.getElementById('pageProfile').style.display = '';

@@ -95,63 +95,170 @@
     <!-- Main Content -->
     <main class="main" id="mainContent">
 
-        <!-- Account Dashboard -->
+        <!-- ======= ACCOUNT DASHBOARD ======= -->
         <div id="pageDashboard" style="display:none">
             <div class="dashboard-container">
                 <aside class="dashboard-sidebar">
                     <div class="dashboard-user">
-                        <div class="dashboard-avatar" id="dashboardAvatar"></div>
-                        <div class="dashboard-username" id="dashboardUsername">User</div>
-                        <div class="dashboard-role" id="dashboardRole">User</div>
+                        <div class="dashboard-avatar" id="dashAvatarDisplay">?</div>
+                        <div class="dashboard-username" id="dashUsernameDisplay">User</div>
+                        <div class="dashboard-role" id="dashRoleDisplay">Member</div>
                     </div>
-                    <nav class="dashboard-menu">
-                        <a href="#" onclick="showDashboardSection('account')" id="dashAccountBtn"><span>&#x1F464;</span> My account</a>
-                        <a href="#" onclick="showDashboardSection('deposit')"><span>&#x2795;</span> Deposit</a>
-                        <a href="#" onclick="showDashboardSection('orders')"><span>&#x1F4CB;</span> My orders</a>
-                        <a href="#" onclick="showDashboardSection('withdraw')"><span>&#x1F4B8;</span> Withdraw</a>
-                        <a href="#" onclick="showDashboardSection('messenger')"><span>&#x1F4AC;</span> Messenger</a>
-                        <a href="#" onclick="showDashboardSection('tickets')"><span>&#x1F3AB;</span> Tickets</a>
-                        <a href="#" onclick="showDashboardSection('block')"><span>&#x26D4;</span> Block users</a>
+                    <nav class="dashboard-menu" id="dashboardMenu">
+                        <a href="#" class="dash-link active" data-section="account"><span class="dash-icon">&#x1F464;</span> My Account</a>
+                        <a href="#" class="dash-link" data-section="wallet-internal"><span class="dash-icon">&#x1F4B0;</span> Wallet</a>
+                        <a href="#" class="dash-link" data-section="deposit"><span class="dash-icon">&#x1F4E5;</span> Deposit</a>
+                        <a href="#" class="dash-link" data-section="withdraw"><span class="dash-icon">&#x1F4E4;</span> Withdraw</a>
+                        <a href="#" class="dash-link" data-section="orders"><span class="dash-icon">&#x1F4CB;</span> My Orders</a>
+                        <a href="#" class="dash-link" data-section="messenger"><span class="dash-icon">&#x1F4AC;</span> Messenger</a>
+                        <a href="#" class="dash-link" data-section="tickets"><span class="dash-icon">&#x1F3AB;</span> Tickets</a>
+                        <a href="#" class="dash-link" data-section="block"><span class="dash-icon">&#x26D4;</span> Block Users</a>
+                        <a href="#" class="dash-link dash-logout" onclick="logout()"><span class="dash-icon">&#x1F6AA;</span> Logout</a>
                     </nav>
                 </aside>
                 <section class="dashboard-main" id="dashboardMain">
-                    <!-- Sezioni dinamiche -->
-                    <div id="dashboardSectionAccount" style="display:none">
-                        <h2>My account</h2>
-                        <div class="account-edit-form">
-                            <div class="edit-avatar-block">
-                                <div class="edit-avatar" id="editAvatar"></div>
-                                <button class="btn btn-outline btn-sm" onclick="showModal('avatar')">Edit avatar</button>
+
+                    <!-- === MY ACCOUNT === -->
+                    <div class="dash-section" id="dashSection-account">
+                        <h2 class="dash-section-title">My Account</h2>
+                        <div class="dash-card">
+                            <div class="dash-account-top">
+                                <div class="dash-avatar-edit">
+                                    <div class="dash-avatar-big" id="dashAvatarBig">?</div>
+                                    <button class="btn btn-outline btn-sm" onclick="showModal('avatar')">Change Avatar</button>
+                                </div>
+                                <div class="dash-account-stats">
+                                    <div class="dash-stat"><span class="dash-stat-val" id="dashStatCredits">0</span><span class="dash-stat-label">Credits</span></div>
+                                    <div class="dash-stat"><span class="dash-stat-val" id="dashStatRep">0</span><span class="dash-stat-label">Reputation</span></div>
+                                    <div class="dash-stat"><span class="dash-stat-val" id="dashStatOrders">0</span><span class="dash-stat-label">Orders</span></div>
+                                </div>
                             </div>
-                            <form onsubmit="saveAccountInfo(event)">
-                                <div class="input-group"><label>Username</label><input type="text" id="editUsername" required></div>
-                                <div class="input-group"><label>Email</label><input type="email" id="editEmail" required></div>
-                                <div class="input-group"><label>Bio</label><textarea id="editBio" rows="2"></textarea></div>
-                                <button type="submit" class="btn btn-primary">Save</button>
+                            <form id="dashAccountForm" onsubmit="saveDashAccountInfo(event)">
+                                <div class="input-group"><label>Username</label><input type="text" id="dashEditUsername" required minlength="3"></div>
+                                <div class="input-group"><label>Email</label><input type="email" id="dashEditEmail" required></div>
+                                <div class="input-group"><label>Bio</label><textarea id="dashEditBio" rows="3" maxlength="500"></textarea></div>
+                                <div class="input-group"><label>Website</label><input type="text" id="dashEditWebsite" maxlength="200"></div>
+                                <div class="input-group"><label>Location</label><input type="text" id="dashEditLocation" maxlength="100"></div>
+                                <div class="input-group"><label>Jabber / XMPP</label><input type="text" id="dashEditJabber" maxlength="100"></div>
+                                <div class="dash-form-actions">
+                                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                                    <span class="dash-form-msg" id="dashAccountMsg"></span>
+                                </div>
                             </form>
                         </div>
                     </div>
-                    <div id="dashboardSectionTickets" style="display:none">
-                        <div class="dashboard-tickets-header">
-                            <h2>Tickets</h2>
-                            <button class="btn btn-accent" onclick="showModal('newTicket')">+ New ticket</button>
+
+                    <!-- === INTERNAL WALLET === -->
+                    <div class="dash-section" id="dashSection-wallet-internal" style="display:none">
+                        <h2 class="dash-section-title">Internal Wallet</h2>
+                        <div class="dash-wallet-overview" id="dashWalletOverview">
+                            <div class="loading">Loading...</div>
                         </div>
-                        <div id="dashboardTicketsList"></div>
+                        <h3 class="dash-subtitle">Recent Transactions</h3>
+                        <div class="dash-tx-list" id="dashTxList">
+                            <div class="loading">Loading...</div>
+                        </div>
                     </div>
-                    <!-- Altre sezioni: deposit, orders, withdraw, messenger, block... -->
+
+                    <!-- === DEPOSIT === -->
+                    <div class="dash-section" id="dashSection-deposit" style="display:none">
+                        <h2 class="dash-section-title">Deposit Crypto</h2>
+                        <div class="dash-card">
+                            <p class="dash-info-text">Select a cryptocurrency and send funds to the platform address. Provide the TX ID after sending.</p>
+                            <form id="dashDepositForm" onsubmit="dashDoDeposit(event)">
+                                <div class="input-group">
+                                    <label>Currency</label>
+                                    <select id="dashDepositCurrency" class="dash-select">
+                                        <option value="BTC">BTC - Bitcoin</option>
+                                        <option value="ETH">ETH - Ethereum</option>
+                                        <option value="USDT">USDT - Tether</option>
+                                        <option value="LTC">LTC - Litecoin</option>
+                                        <option value="XMR">XMR - Monero</option>
+                                    </select>
+                                </div>
+                                <div class="input-group"><label>Amount</label><input type="number" id="dashDepositAmount" step="0.00000001" min="0.00000001" required></div>
+                                <div class="input-group"><label>TX ID (Transaction Hash)</label><input type="text" id="dashDepositTxId" required maxlength="200" placeholder="0x..."></div>
+                                <button type="submit" class="btn btn-primary">Confirm Deposit</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- === WITHDRAW === -->
+                    <div class="dash-section" id="dashSection-withdraw" style="display:none">
+                        <h2 class="dash-section-title">Withdraw to External Wallet</h2>
+                        <div class="dash-card">
+                            <p class="dash-info-text">Transfer funds from your internal wallet to your external crypto wallet.</p>
+                            <form id="dashWithdrawForm" onsubmit="dashDoWithdraw(event)">
+                                <div class="input-group">
+                                    <label>Currency</label>
+                                    <select id="dashWithdrawCurrency" class="dash-select">
+                                        <option value="BTC">BTC - Bitcoin</option>
+                                        <option value="ETH">ETH - Ethereum</option>
+                                        <option value="USDT">USDT - Tether</option>
+                                        <option value="LTC">LTC - Litecoin</option>
+                                        <option value="XMR">XMR - Monero</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label>Available Balance</label>
+                                    <div class="dash-balance-display" id="dashWithdrawBalance">Select currency...</div>
+                                </div>
+                                <div class="input-group"><label>Amount</label><input type="number" id="dashWithdrawAmount" step="0.00000001" min="0.00000001" required></div>
+                                <div class="input-group"><label>Destination Wallet Address</label><input type="text" id="dashWithdrawAddress" required maxlength="200" placeholder="Enter wallet address..."></div>
+                                <button type="submit" class="btn btn-primary">Confirm Withdrawal</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- === MY ORDERS === -->
+                    <div class="dash-section" id="dashSection-orders" style="display:none">
+                        <h2 class="dash-section-title">My Orders</h2>
+                        <div class="dash-tabs">
+                            <button class="dash-tab active" onclick="loadDashOrders('buying')">Buying</button>
+                            <button class="dash-tab" onclick="loadDashOrders('selling')">Selling</button>
+                        </div>
+                        <div id="dashOrdersList" class="dash-orders-list">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- === MESSENGER === -->
+                    <div class="dash-section" id="dashSection-messenger" style="display:none">
+                        <h2 class="dash-section-title">Messenger</h2>
+                        <div id="dashMessengerContent">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- === TICKETS === -->
+                    <div class="dash-section" id="dashSection-tickets" style="display:none">
+                        <div class="dash-section-header">
+                            <h2 class="dash-section-title">Support Tickets</h2>
+                            <button class="btn btn-accent btn-sm" onclick="showDashNewTicketForm()">+ New Ticket</button>
+                        </div>
+                        <div id="dashTicketsList">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- === BLOCK USERS === -->
+                    <div class="dash-section" id="dashSection-block" style="display:none">
+                        <h2 class="dash-section-title">Block Users</h2>
+                        <div class="dash-card">
+                            <div class="input-group">
+                                <label>Username to block</label>
+                                <div class="dash-inline-form">
+                                    <input type="text" id="dashBlockUsername" placeholder="Enter username..." maxlength="50">
+                                    <button class="btn btn-danger btn-sm" onclick="dashBlockUser()">Block</button>
+                                </div>
+                            </div>
+                            <h3 class="dash-subtitle" style="margin-top:1.5rem">Blocked Users</h3>
+                            <div id="dashBlockedList"><p class="dash-muted">No blocked users</p></div>
+                        </div>
+                    </div>
+
                 </section>
             </div>
-        </div>
-
-        <!-- Modale nuovo ticket -->
-        <div id="modalNewTicket" class="modal" style="display:none">
-            <h2>New Ticket</h2>
-            <form onsubmit="submitNewTicket(event)">
-                <div class="input-group"><label>Subject</label><input type="text" id="ticketSubject" required></div>
-                <div class="input-group"><label>Message</label><textarea id="ticketMessage" rows="4" required></textarea></div>
-                <div class="modal-error" id="ticketError"></div>
-                <button type="submit" class="btn btn-primary">Send</button>
-            </form>
         </div>
 
         <!-- Landing Page (visible when not logged in) -->

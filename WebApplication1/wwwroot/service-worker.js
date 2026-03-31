@@ -1,4 +1,4 @@
-const CACHE_NAME = 'crimecode-v3';
+const CACHE_NAME = 'crimecode-v4';
 const STATIC_ASSETS = [
     '/',
     '/index.html',
