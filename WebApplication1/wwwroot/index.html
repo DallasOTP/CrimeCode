@@ -1,9 +1,67 @@
+        <!-- Account Dashboard -->
+        <div id="pageDashboard" style="display:none">
+            <div class="dashboard-container">
+                <aside class="dashboard-sidebar">
+                    <div class="dashboard-user">
+                        <div class="dashboard-avatar" id="dashboardAvatar"></div>
+                        <div class="dashboard-username" id="dashboardUsername">User</div>
+                        <div class="dashboard-role" id="dashboardRole">User</div>
+                    </div>
+                    <nav class="dashboard-menu">
+                        <a href="#" onclick="showDashboardSection('account')" id="dashAccountBtn"><span>👤</span> My account</a>
+                        <a href="#" onclick="showDashboardSection('deposit')"><span>➕</span> Deposit</a>
+                        <a href="#" onclick="showDashboardSection('orders')"><span>📋</span> My orders</a>
+                        <a href="#" onclick="showDashboardSection('withdraw')"><span>💸</span> Withdraw</a>
+                        <a href="#" onclick="showDashboardSection('messenger')"><span>💬</span> Messenger</a>
+                        <a href="#" onclick="showDashboardSection('tickets')"><span>🎫</span> Tickets</a>
+                        <a href="#" onclick="showDashboardSection('block')"><span>⛔</span> Block users</a>
+                    </nav>
+                </aside>
+                <section class="dashboard-main" id="dashboardMain">
+                    <!-- Sezioni dinamiche -->
+                    <div id="dashboardSectionAccount" style="display:none">
+                        <h2>My account</h2>
+                        <div class="account-edit-form">
+                            <div class="edit-avatar-block">
+                                <div class="edit-avatar" id="editAvatar"></div>
+                                <button class="btn btn-outline btn-sm" onclick="showModal('avatar')">Edit avatar</button>
+                            </div>
+                            <form onsubmit="saveAccountInfo(event)">
+                                <div class="input-group"><label>Username</label><input type="text" id="editUsername" required></div>
+                                <div class="input-group"><label>Email</label><input type="email" id="editEmail" required></div>
+                                <div class="input-group"><label>Bio</label><textarea id="editBio" rows="2"></textarea></div>
+                                <button type="submit" class="btn btn-primary">Save</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div id="dashboardSectionTickets" style="display:none">
+                        <div class="dashboard-tickets-header">
+                            <h2>Tickets</h2>
+                            <button class="btn btn-accent" onclick="showModal('newTicket')">+ New ticket</button>
+                        </div>
+                        <div id="dashboardTicketsList"></div>
+                    </div>
+                    <!-- Altre sezioni: deposit, orders, withdraw, messenger, block... -->
+                </section>
+            </div>
+        </div>
+
+        <!-- Modale nuovo ticket -->
+        <div id="modalNewTicket" class="modal" style="display:none">
+            <h2>New Ticket</h2>
+            <form onsubmit="submitNewTicket(event)">
+                <div class="input-group"><label>Subject</label><input type="text" id="ticketSubject" required></div>
+                <div class="input-group"><label>Message</label><textarea id="ticketMessage" rows="4" required></textarea></div>
+                <div class="modal-error" id="ticketError"></div>
+                <button type="submit" class="btn btn-primary">Send</button>
+            </form>
+        </div>
 <!DOCTYPE html>
 <html lang="it">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CrimeCode — Underground Market</title>
+    <title>CrimeMarket — Next Generation Market</title>
     <link rel="icon" type="image/png" href="img/logo.png">
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0a0e17">
@@ -34,72 +92,62 @@
         </div>
     </div>
 
-    <!-- Header -->
-    <header class="header">
-        <div class="header-inner">
-            <a href="#" class="logo" onclick="navigate('home')">
-                <img src="img/logo.png" alt="CrimeCode" class="logo-img">
-            </a>
 
-            <!-- Hamburger Menu -->
-            <button class="hamburger" id="hamburgerBtn" onclick="toggleMobileMenu()" aria-label="Menu">
-                <span></span><span></span><span></span>
-            </button>
-
-            <!-- Navigation Links -->
-            <nav class="main-nav" id="mainNav">
-                <a href="#" onclick="navigate('marketplace')" class="nav-link active" data-page="marketplace">🛒 Market</a>
-                <a href="#" onclick="navigate('vendors')" class="nav-link" data-page="vendors">🏪 Venditori</a>
-                <a href="#" onclick="navigate('leaderboard')" class="nav-link" data-page="leaderboard">🏆 Top Venditori</a>
-                <a href="#" onclick="navigate('members')" class="nav-link" data-page="members">👥 Membri</a>
-            </nav>
-
-            <div class="search-bar">
-                <input type="text" id="searchInput" placeholder="Cerca nel marketplace..." onkeydown="if(event.key==='Enter')searchMarketplace()">
-                <button onclick="searchMarketplace()">🔍</button>
-            </div>
-
-            <nav class="header-nav" id="headerNav">
-                <button class="btn btn-outline" onclick="showModal('login')">Accedi</button>
-                <button class="btn btn-primary" onclick="showModal('register')">Registrati</button>
-            </nav>
-            <nav class="header-nav header-nav-logged" id="headerNavLogged" style="display:none">
-                <div class="user-credits" id="userCreditsDisplay" title="Crediti">💰 <span id="creditCount">0</span></div>
-                <button class="btn-icon" onclick="navigate('notifications')" title="Notifiche">
-                    🔔<span class="badge" id="notifBadge" style="display:none">0</span>
-                </button>
-                <button class="btn-icon" onclick="navigate('messages')" title="Messaggi">
-                    ✉️<span class="badge" id="msgBadge" style="display:none">0</span>
-                </button>
-                <button class="btn-icon" onclick="toggleChatWidget()" title="Chat" id="chatToggleBtn" style="display:none">
-                    💬<span class="badge" id="chatBadge" style="display:none">0</span>
-                </button>
-                <div class="user-menu" id="userMenu">
-                    <button class="user-menu-btn" onclick="toggleUserMenu()">
-                        <div class="user-menu-avatar" id="userMenuAvatar">?</div>
-                        <span id="userGreeting">User</span>
-                        <span class="chevron">▼</span>
-                    </button>
-                    <div class="user-dropdown" id="userDropdown">
-                        <a href="#" onclick="navigate('profile',{id:currentUser?.userId})">👤 Profilo</a>
-                        <a href="#" onclick="navigate('messages')">✉️ Messaggi</a>
-                        <a href="#" onclick="navigate('notifications')">🔔 Notifiche</a>
-                        <a href="#" onclick="navigate('myOrders')">📋 Ordini</a>
-                        <a href="#" onclick="navigate('wallet')">💰 Wallet</a>
-                        <a href="#" onclick="navigate('wishlist')">❤️ Wishlist</a>
-                        <a href="#" onclick="navigate('tickets')">🎫 Supporto</a>
-                        <a href="#" id="vendorPanelLink" style="display:none" onclick="navigate('myListings')">📦 Vendor Panel</a>
-                        <a href="#" id="vendorVouchersLink" style="display:none" onclick="navigate('vouchers')">🎟️ Voucher</a>
-                        <a href="#" id="vendorStatsLink" style="display:none" onclick="navigate('vendorStats')">📊 Statistiche</a>
-                        <a href="#" onclick="navigate('settings2fa')">🔐 2FA</a>
-                        <a href="#" id="adminLink" style="display:none" onclick="navigate('admin')">⚙️ Admin</a>
-                        <div class="dropdown-divider"></div>
-                        <a href="#" onclick="logout()">🚪 Esci</a>
+        <!-- Header CrimeMarket stile NEXUS -->
+        <header class="header header-nexus">
+            <div class="header-inner">
+                <div class="header-left">
+                    <a href="#" class="logo" onclick="navigate('home')">
+                        <span class="logo-text"><span class="logo-x">CRIME</span>MARKET</span>
+                        <span class="logo-sub">NEXT GENERATION MARKET</span>
+                    </a>
+                </div>
+                <nav class="header-center">
+                    <a href="#" onclick="navigate('marketplace')" class="nav-link" data-page="marketplace">HOME</a>
+                    <a href="#" onclick="navigate('myOrders')" class="nav-link" data-page="myOrders">MY ORDERS</a>
+                    <a href="#" onclick="navigate('vendors')" class="nav-link" data-page="vendors">BECOME A VENDOR</a>
+                </nav>
+                <div class="header-right">
+                    <div class="wallet-dropdown" id="walletDropdown">
+                        <button class="wallet-btn" onclick="toggleWalletDropdown()">
+                            <span class="wallet-icon">💼</span> WALLET <span class="chevron">▼</span>
+                        </button>
+                        <div class="wallet-menu" id="walletMenu">
+                            <div class="wallet-provider" onclick="connectWallet('telegram')"><img src="img/telegram.png" alt="Telegram Wallet"> Telegram Wallet</div>
+                            <div class="wallet-provider" onclick="connectWallet('metamask')"><img src="img/metamask.png" alt="Metamask"> Metamask</div>
+                            <div class="wallet-provider" onclick="connectWallet('tonkeeper')"><img src="img/ton.png" alt="Tonkeeper"> Tonkeeper</div>
+                            <div class="wallet-divider"></div>
+                            <div class="wallet-status" id="walletStatus">Nessun wallet collegato</div>
+                            <div class="wallet-balance" id="walletBalance" style="display:none"></div>
+                            <button class="btn btn-outline btn-sm" id="disconnectWalletBtn" style="display:none" onclick="disconnectWallet()">Disconnetti</button>
+                        </div>
+                    </div>
+                    <div class="user-menu" id="userMenu">
+                        <button class="user-menu-btn" onclick="toggleUserMenu()">
+                            <div class="user-menu-avatar" id="userMenuAvatar">?</div>
+                            <span id="userGreeting">User</span>
+                            <span class="chevron">▼</span>
+                        </button>
+                        <div class="user-dropdown" id="userDropdown">
+                            <a href="#" onclick="navigate('profile',{id:currentUser?.userId})">👤 Profilo</a>
+                            <a href="#" onclick="navigate('messages')">✉️ Messaggi</a>
+                            <a href="#" onclick="navigate('notifications')">🔔 Notifiche</a>
+                            <a href="#" onclick="navigate('myOrders')">📋 Ordini</a>
+                            <a href="#" onclick="navigate('wallet')">💰 Wallet</a>
+                            <a href="#" onclick="navigate('wishlist')">❤️ Wishlist</a>
+                            <a href="#" onclick="navigate('tickets')">🎫 Supporto</a>
+                            <a href="#" id="vendorPanelLink" style="display:none" onclick="navigate('myListings')">📦 Vendor Panel</a>
+                            <a href="#" id="vendorVouchersLink" style="display:none" onclick="navigate('vouchers')">🎟️ Voucher</a>
+                            <a href="#" id="vendorStatsLink" style="display:none" onclick="navigate('vendorStats')">📊 Statistiche</a>
+                            <a href="#" onclick="navigate('settings2fa')">🔐 2FA</a>
+                            <a href="#" id="adminLink" style="display:none" onclick="navigate('admin')">⚙️ Admin</a>
+                            <div class="dropdown-divider"></div>
+                            <a href="#" onclick="logout()">🚪 Esci</a>
+                        </div>
                     </div>
                 </div>
-            </nav>
-        </div>
-    </header>
+            </div>
+        </header>
 
 
     <!-- Main Content -->
@@ -114,8 +162,8 @@
                     <div class="shield-ring ring-3"></div>
                     <span class="shield-core">🛡️</span>
                 </div>
-                <h1 class="landing-title">Crime<span class="accent">Code</span></h1>
-                <p class="landing-subtitle">Il marketplace underground più sicuro d'Italia</p>
+                <h1 class="landing-title">Crime<span class="accent">Market</span></h1>
+                <p class="landing-subtitle">Next Generation Market — Sicurezza & Crypto</p>
                 <p class="landing-desc">Piattaforma protetta con Anti-DDoS, Offshore Shield, crittografia end-to-end e protezione anti-bot. Accedi per esplorare il marketplace.</p>
                 <div class="landing-stats" id="landingStats"></div>
                 <div class="landing-actions">
@@ -179,8 +227,8 @@
         <!-- Marketplace (Main page) -->
         <div id="pageMarketplace">
             <div class="market-hero">
-                <h1>🛒 CrimeCode Market</h1>
-                <p>Il marketplace underground — Compra e vendi in crypto con escrow sicuro</p>
+                <h1>🛒 CrimeMarket</h1>
+                <p>Next Generation Market — Compra e vendi in crypto con escrow sicuro</p>
                 <div class="market-stats" id="marketStats"></div>
             </div>
             <div class="market-actions">

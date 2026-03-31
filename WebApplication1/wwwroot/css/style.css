@@ -1,3 +1,537 @@
+/* === HEADER CRIMEMARKET NEXUS STYLE === */
+.header-nexus {
+    background: #18171c;
+    border-bottom: 1.5px solid #23222a;
+    box-shadow: 0 2px 12px 0 rgba(0,0,0,0.12);
+}
+
+/* === DASHBOARD & SIDEBAR NEXUS STYLE === */
+.dashboard-container {
+    display: flex;
+    min-height: 80vh;
+    background: #181c24;
+    border-radius: 18px;
+    box-shadow: 0 2px 16px 0 #000a;
+    margin: 32px auto 0 auto;
+    max-width: 1200px;
+    overflow: hidden;
+}
+.dashboard-sidebar {
+    width: 260px;
+    background: #1e2330;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 0 0 0;
+    border-right: 1.5px solid #23283a;
+    min-height: 80vh;
+}
+.dashboard-avatar {
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #3e8cff;
+    margin-bottom: 18px;
+    background: #23283a;
+}
+.dashboard-username {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #fff;
+}
+.dashboard-menu {
+    margin-top: 32px;
+    width: 100%;
+}
+.dashboard-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.dashboard-menu li {
+    padding: 14px 0 14px 36px;
+    font-size: 1.08rem;
+    color: #b6c2e0;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+    border-left: 3px solid transparent;
+}
+.dashboard-menu li.active, .dashboard-menu li:hover {
+    background: #23283a;
+    color: #3e8cff;
+    border-left: 3px solid #3e8cff;
+}
+.dashboard-sidebar .dashboard-logout {
+    margin-top: auto;
+    margin-bottom: 32px;
+    color: #ff4d4f;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.18s;
+}
+.dashboard-sidebar .dashboard-logout:hover {
+    color: #ff7875;
+}
+.dashboard-main {
+    flex: 1;
+    padding: 40px 48px;
+    background: #181c24;
+    color: #e6eaf3;
+    min-width: 0;
+}
+.account-edit {
+    max-width: 420px;
+    margin: 0 auto;
+    background: #23283a;
+    padding: 32px 28px 28px 28px;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px 0 #0004;
+}
+.account-edit label {
+    display: block;
+    margin-bottom: 8px;
+    color: #b6c2e0;
+    font-size: 1rem;
+}
+.account-edit input[type="text"],
+.account-edit input[type="email"] {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 7px;
+    border: 1.5px solid #2e3448;
+    background: #181c24;
+    color: #e6eaf3;
+    margin-bottom: 18px;
+    font-size: 1rem;
+    transition: border 0.18s;
+}
+.account-edit input[type="text"]:focus,
+.account-edit input[type="email"]:focus {
+    border: 1.5px solid #3e8cff;
+    outline: none;
+}
+.account-edit .avatar-upload-label {
+    display: block;
+    margin-bottom: 10px;
+    color: #b6c2e0;
+    font-size: 1rem;
+}
+.account-edit .avatar-upload {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+.account-edit .avatar-upload img {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #3e8cff;
+}
+.account-edit .avatar-upload input[type="file"] {
+    color: #b6c2e0;
+}
+.account-edit button {
+    background: #3e8cff;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 10px 22px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s;
+}
+.account-edit button:hover {
+    background: #2566c7;
+}
+.tickets-section {
+    max-width: 700px;
+    margin: 0 auto;
+    background: #23283a;
+    padding: 32px 28px 28px 28px;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px 0 #0004;
+}
+.tickets-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+}
+.tickets-header h2 {
+    font-size: 1.2rem;
+    color: #e6eaf3;
+    margin: 0;
+}
+.tickets-header button {
+    background: #3e8cff;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 8px 18px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.18s;
+}
+.tickets-header button:hover {
+    background: #2566c7;
+}
+.tickets-list {
+    width: 100%;
+    border-collapse: collapse;
+}
+.tickets-list th, .tickets-list td {
+    padding: 10px 8px;
+    text-align: left;
+}
+.tickets-list th {
+    color: #b6c2e0;
+    font-weight: 600;
+    border-bottom: 1.5px solid #2e3448;
+}
+.tickets-list tr {
+    border-bottom: 1px solid #23283a;
+}
+.tickets-list tr:last-child {
+    border-bottom: none;
+}
+.tickets-list td {
+    color: #e6eaf3;
+    font-size: 0.98rem;
+}
+.ticket-status-open {
+    color: #3e8cff;
+    font-weight: 600;
+}
+.ticket-status-closed {
+    color: #ff4d4f;
+    font-weight: 600;
+}
+.ticket-status-pending {
+    color: #ffb300;
+    font-weight: 600;
+}
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(24,28,36,0.92);
+    justify-content: center;
+    align-items: center;
+}
+.modal.active {
+    display: flex;
+}
+.modal-content {
+    background: #23283a;
+    padding: 32px 28px 28px 28px;
+    border-radius: 14px;
+    box-shadow: 0 2px 16px 0 #000a;
+    min-width: 340px;
+    max-width: 98vw;
+}
+.modal-content h3 {
+    color: #e6eaf3;
+    margin-top: 0;
+}
+.modal-content label {
+    color: #b6c2e0;
+    font-size: 1rem;
+    margin-bottom: 6px;
+    display: block;
+}
+.modal-content input[type="text"],
+.modal-content textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 7px;
+    border: 1.5px solid #2e3448;
+    background: #181c24;
+    color: #e6eaf3;
+    margin-bottom: 18px;
+    font-size: 1rem;
+    transition: border 0.18s;
+}
+.modal-content input[type="text"]:focus,
+.modal-content textarea:focus {
+    border: 1.5px solid #3e8cff;
+    outline: none;
+}
+.modal-content button {
+    background: #3e8cff;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 10px 22px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s;
+}
+.modal-content button:hover {
+    background: #2566c7;
+}
+.modal-close {
+    position: absolute;
+    top: 18px;
+    right: 24px;
+    font-size: 1.5rem;
+    color: #b6c2e0;
+    cursor: pointer;
+    transition: color 0.18s;
+}
+.modal-close:hover {
+    color: #ff4d4f;
+}
+@media (max-width: 900px) {
+    .dashboard-container {
+        flex-direction: column;
+        min-height: unset;
+        max-width: 98vw;
+    }
+    .dashboard-sidebar {
+        width: 100%;
+        min-height: unset;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding: 18px 18px 0 18px;
+        border-right: none;
+        border-bottom: 1.5px solid #23283a;
+    }
+    .dashboard-menu {
+        margin-top: 0;
+    }
+    .dashboard-main {
+        padding: 24px 8vw;
+    }
+}
+@media (max-width: 600px) {
+    .dashboard-main, .account-edit, .tickets-section, .modal-content {
+        padding: 16px 4vw;
+    }
+    .dashboard-sidebar {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 12px 8px 0 8px;
+    }
+    .dashboard-avatar {
+        width: 64px;
+        height: 64px;
+    }
+}
+.header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    padding: 0 2.5rem;
+    gap: 0;
+}
+.header-left .logo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-decoration: none;
+}
+.logo-text {
+    font-family: 'Orbitron', 'JetBrains Mono', monospace;
+    font-size: 2.1rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #fff;
+    line-height: 1;
+}
+.logo-x {
+    color: #ff2244;
+    letter-spacing: 1px;
+}
+.logo-sub {
+    font-size: 0.75rem;
+    color: #b0b0b0;
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: -2px;
+    letter-spacing: 2.5px;
+}
+.header-center {
+    display: flex;
+    align-items: center;
+    gap: 2.5rem;
+    flex: 1;
+    justify-content: center;
+}
+.header-center .nav-link {
+    color: #e0e0e0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 0.2rem 1.2rem;
+    border-radius: 6px;
+    transition: background 0.18s, color 0.18s;
+    text-transform: uppercase;
+}
+.header-center .nav-link:hover, .header-center .nav-link.active {
+    background: #23222a;
+    color: #ff2244;
+}
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+}
+.wallet-dropdown {
+    position: relative;
+}
+.wallet-btn {
+    background: #23222a;
+    color: #e0e0e0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+.wallet-btn:hover {
+    background: #ff2244;
+    color: #fff;
+}
+.wallet-icon {
+    font-size: 1.2rem;
+}
+.wallet-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 110%;
+    min-width: 220px;
+    background: #23222a;
+    border-radius: 10px;
+    box-shadow: 0 8px 32px 0 rgba(0,0,0,0.25);
+    padding: 1rem 0.7rem 0.7rem 0.7rem;
+    z-index: 100;
+}
+.wallet-dropdown.open .wallet-menu {
+    display: block;
+}
+.wallet-provider {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.5rem 0.7rem;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: #fff;
+    transition: background 0.18s, color 0.18s;
+}
+.wallet-provider img {
+    width: 26px; height: 26px; border-radius: 5px; background: #fff;
+}
+.wallet-provider:hover {
+    background: #ff2244;
+    color: #fff;
+}
+.wallet-divider {
+    border-top: 1px solid #35343c;
+    margin: 0.7rem 0 0.5rem 0;
+}
+.wallet-status {
+    color: #b0b0b0;
+    font-size: 0.95rem;
+    margin-bottom: 0.3rem;
+}
+.wallet-balance {
+    color: #00e5a0;
+    font-size: 1.1rem;
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 0.5rem;
+}
+.user-menu {
+    position: relative;
+}
+.user-menu-btn {
+    background: #23222a;
+    color: #e0e0e0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1.1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+.user-menu-btn:hover {
+    background: #ff2244;
+    color: #fff;
+}
+.user-menu-avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: #18171c; color: #ff2244; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1.1rem; }
+.user-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 110%;
+    min-width: 200px;
+    background: #23222a;
+    border-radius: 10px;
+    box-shadow: 0 8px 32px 0 rgba(0,0,0,0.25);
+    padding: 0.7rem 0.7rem 0.7rem 0.7rem;
+    z-index: 100;
+}
+.user-menu.open .user-dropdown {
+    display: block;
+}
+.user-dropdown a {
+    display: block;
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+    padding: 0.5rem 0.7rem;
+    border-radius: 7px;
+    transition: background 0.18s, color 0.18s;
+}
+.user-dropdown a:hover {
+    background: #ff2244;
+    color: #fff;
+}
+.dropdown-divider, .wallet-divider {
+    border-top: 1px solid #35343c;
+    margin: 0.7rem 0 0.5rem 0;
+}
+.chevron { font-size: 0.9em; color: #b0b0b0; margin-left: 0.2em; }
+
+@media (max-width: 900px) {
+    .header-inner { padding: 0 0.7rem; }
+    .header-center { gap: 1.1rem; }
+    .logo-text { font-size: 1.3rem; }
+}
+@media (max-width: 600px) {
+    .header-inner { flex-direction: column; height: auto; gap: 0.5rem; }
+    .header-center { flex-direction: column; gap: 0.5rem; }
+    .header-right { flex-direction: column; gap: 0.5rem; }
+}
 /* === CrimeCode Forum — craxpro.to Inspired Dark Underground Theme === */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap');
 

@@ -1,4 +1,115 @@
 // === CrimeCode Market — Frontend Application ===
+// === DASHBOARD NEXUS ===
+document.addEventListener('DOMContentLoaded', () => {
+    // Dashboard sidebar navigation
+    const sidebar = document.querySelector('.dashboard-sidebar');
+    if (sidebar) {
+        sidebar.addEventListener('click', function (e) {
+            const li = e.target.closest('li[data-section]');
+            if (!li) return;
+            document.querySelectorAll('.dashboard-menu li').forEach(x => x.classList.remove('active'));
+            li.classList.add('active');
+            showDashboardSection(li.dataset.section);
+        });
+    }
+    // Avatar upload preview
+    const avatarInput = document.getElementById('dashboardAvatarFile');
+    if (avatarInput) {
+        avatarInput.addEventListener('change', function () {
+            const file = this.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                document.getElementById('dashboardAvatarImg').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    // Avatar upload submit
+    const avatarForm = document.getElementById('dashboardAvatarForm');
+    if (avatarForm) {
+        avatarForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('dashboardAvatarFile');
+            if (!fileInput.files.length) return showToast('Seleziona un file', 'error');
+            const formData = new FormData();
+            formData.append('avatar', fileInput.files[0]);
+            try {
+                await apiRaw('/avatar/upload', { method: 'POST', body: formData });
+                showToast('Avatar aggiornato!', 'success');
+                refreshMe();
+            } catch (err) {
+                showToast(err.data?.error || 'Errore upload avatar', 'error');
+            }
+        });
+    }
+    // Ticket modal open/close
+    const openTicketBtn = document.getElementById('openTicketBtn');
+    if (openTicketBtn) openTicketBtn.onclick = () => document.getElementById('modalTicket').classList.add('active');
+    const closeTicketBtn = document.getElementById('closeTicketModal');
+    if (closeTicketBtn) closeTicketBtn.onclick = () => document.getElementById('modalTicket').classList.remove('active');
+    // Ticket submit
+    const ticketForm = document.getElementById('ticketForm');
+    if (ticketForm) {
+        ticketForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const subject = document.getElementById('ticketSubject').value.trim();
+            const message = document.getElementById('ticketMessage').value.trim();
+            if (!subject || !message) return showToast('Compila tutti i campi', 'error');
+            try {
+                await api('/tickets', { method: 'POST', body: JSON.stringify({ subject, message }) });
+                showToast('Ticket inviato!', 'success');
+                document.getElementById('modalTicket').classList.remove('active');
+                loadTicketsDashboard();
+            } catch (err) {
+                showToast(err.data?.error || 'Errore invio ticket', 'error');
+            }
+        });
+    }
+    // Carica tickets all'apertura dashboard
+    if (document.getElementById('dashboardTicketsTable')) loadTicketsDashboard();
+    // Wallet connect/disconnect (stub)
+    document.querySelectorAll('.wallet-connect-btn').forEach(btn => {
+        btn.onclick = function () {
+            showToast('Funzionalità in arrivo: integrazione wallet ' + btn.dataset.wallet, 'info');
+        };
+    });
+});
+
+function showDashboardSection(section) {
+    document.querySelectorAll('.dashboard-main-section').forEach(s => s.style.display = 'none');
+    const el = document.getElementById('dashboardSection_' + section);
+    if (el) el.style.display = '';
+}
+
+// Carica tickets nella dashboard
+async function loadTicketsDashboard() {
+    const table = document.getElementById('dashboardTicketsTable');
+    if (!table) return;
+    table.innerHTML = '<tr><td colspan="4">Caricamento...</td></tr>';
+    try {
+        const tickets = await api('/tickets');
+        if (!tickets.length) {
+            table.innerHTML = '<tr><td colspan="4">Nessun ticket</td></tr>';
+            return;
+        }
+        table.innerHTML = tickets.map(t => `
+            <tr onclick="showTicketDetail(${t.id})" style="cursor:pointer">
+                <td>${escapeHtml(t.subject)}</td>
+                <td>${new Date(t.createdAt).toLocaleDateString('it-IT')}</td>
+                <td class="ticket-status-${t.status.toLowerCase()}">${escapeHtml(t.status)}</td>
+                <td>Vedi</td>
+            </tr>
+        `).join('');
+    } catch {
+        table.innerHTML = '<tr><td colspan="4">Errore caricamento</td></tr>';
+    }
+}
+
+// Mostra dettaglio ticket (stub: solo alert, backend da completare)
+function showTicketDetail(id) {
+    showToast('Visualizzazione dettagli ticket in arrivo', 'info');
+}
 
 const API = '/api';
 let currentUser = null;
