@@ -11,8 +11,9 @@ COPY --from=build /app/publish .
 # Railway: mount volume at /data via dashboard
 RUN mkdir -p /data
 
-ENV ASPNETCORE_URLS=http://+:${PORT:-8080}
+ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ConnectionStrings__DefaultConnection="Data Source=/data/crimecode.db"
 EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "WebApplication1.dll"]
+# Railway sets PORT at runtime — must use shell form so $PORT is expanded at runtime
+CMD ASPNETCORE_URLS="http://+:${PORT:-8080}" dotnet WebApplication1.dll
