@@ -68,6 +68,7 @@ app.MapFollowEndpoints();
 app.MapAttachmentEndpoints();
 app.MapSearchEndpoints();
 app.MapStatusEndpoints();
+app.MapChatEndpoints();
 
 // Fallback to index.html for SPA routing
 app.MapFallbackToFile("index.html");

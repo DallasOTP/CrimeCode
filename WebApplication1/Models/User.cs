@@ -35,4 +35,6 @@ public class User
     public ICollection<UserFollow> Followers { get; set; } = [];
     public ICollection<UserFollow> Following { get; set; } = [];
     public ICollection<PostAttachment> Attachments { get; set; } = [];
+    public ICollection<ChatMessage> SentChats { get; set; } = [];
+    public ICollection<ChatMessage> ReceivedChats { get; set; } = [];
 }

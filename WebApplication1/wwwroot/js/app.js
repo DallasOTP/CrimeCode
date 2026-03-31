@@ -195,6 +195,7 @@ function updateAuthUI() {
         // Show new listing btn
         const nlb = document.getElementById('newListingBtn');
         if (nlb) nlb.style.display = '';
+        updateChatVisibility();
     } else {
         nav.style.display = 'flex';
         navLogged.style.display = 'none';
@@ -202,6 +203,7 @@ function updateAuthUI() {
         if (sbInput) sbInput.style.display = 'none';
         const nlb = document.getElementById('newListingBtn');
         if (nlb) nlb.style.display = 'none';
+        updateChatVisibility();
     }
 }
 
@@ -281,16 +283,19 @@ function stopBadgePolling() {
     if (badgeInterval) { clearInterval(badgeInterval); badgeInterval = null; }
     setBadge('notifBadge', 0);
     setBadge('msgBadge', 0);
+    setBadge('chatBadge', 0);
 }
 async function updateBadges() {
     if (!currentUser) return;
     try {
-        const [n, m] = await Promise.all([
+        const [n, m, c] = await Promise.all([
             api('/notifications/unread-count'),
-            api('/messages/unread-count')
+            api('/messages/unread-count'),
+            api('/chat/unread-count')
         ]);
         setBadge('notifBadge', n.count);
         setBadge('msgBadge', m.count);
+        setBadge('chatBadge', c.count);
     } catch { /* ignore */ }
 }
 function setBadge(id, count) {
@@ -1203,6 +1208,9 @@ async function loadOnlineUsers() {
         grid.innerHTML = users.map(u => {
             const avatarHtml = u.avatarUrl ? `<img src="${escapeHtml(u.avatarUrl)}" alt="">` : u.username.charAt(0).toUpperCase();
             const statusIcon = {online:'🟢',away:'🟡',busy:'🔴',offline:'⚫'}[u.status] || '🟢';
+            const chatBtn = currentUser && u.id !== currentUser.userId
+                ? `<button class="btn btn-outline btn-xs chat-user-btn" onclick="event.stopPropagation();openChatWith(${u.id},'${escapeHtml(u.username).replace(/'/g, "\\'")}')">💬 Chat</button>`
+                : '';
             return `<div class="online-user-card" onclick="navigate('profile',{id:${u.id}})">
                 <div class="online-user-avatar">
                     ${avatarHtml}
@@ -1212,6 +1220,7 @@ async function loadOnlineUsers() {
                     <div class="online-user-name">${escapeHtml(u.username)} ${statusIcon}</div>
                     <div class="online-user-rank" style="color:${u.rankColor||'var(--text-muted)'}">${escapeHtml(u.rankName || '')}</div>
                 </div>
+                ${chatBtn}
             </div>`;
         }).join('');
     } catch {
@@ -1789,3 +1798,175 @@ document.addEventListener('click', (e) => {
         if (btn) btn.classList.remove('active');
     }
 });
+
+// === Live Chat Widget ===
+let chatCurrentUserId = null;
+let chatLastMsgId = 0;
+let chatPollInterval = null;
+
+function toggleChatWidget() {
+    const widget = document.getElementById('chatWidget');
+    if (!widget) return;
+    if (widget.style.display === 'none') {
+        widget.style.display = 'flex';
+        chatGoBack();
+    } else {
+        widget.style.display = 'none';
+        stopChatPoll();
+    }
+}
+
+function chatGoBack() {
+    chatCurrentUserId = null;
+    chatLastMsgId = 0;
+    stopChatPoll();
+    document.getElementById('chatWidgetTitle').textContent = '\ud83d\udcac Chat Live';
+    document.getElementById('chatBackBtn').style.display = 'none';
+    document.getElementById('chatWidgetInput').style.display = 'none';
+    loadChatContacts();
+}
+
+async function loadChatContacts() {
+    const body = document.getElementById('chatWidgetBody');
+    body.innerHTML = '<div class="loading" style="padding:1rem">Caricamento...</div>';
+    try {
+        const contacts = await api('/chat/contacts');
+        if (contacts.length === 0) {
+            body.innerHTML = '<div class="empty-state" style="padding:1rem;text-align:center"><p style="color:var(--text-muted)">Nessun utente online</p></div>';
+            return;
+        }
+        body.innerHTML = '<div class="chat-contacts-list">' + contacts.map(c => {
+            const statusIcon = {online:'\ud83d\udfe2',away:'\ud83d\udfe1',busy:'\ud83d\udd34',offline:'\u26ab'}[c.status] || '\ud83d\udfe2';
+            const avatarHtml = c.avatarUrl ? `<img src="${escapeHtml(c.avatarUrl)}" alt="">` : `<span>${c.username.charAt(0).toUpperCase()}</span>`;
+            const unreadBadge = c.unreadCount > 0 ? `<span class="chat-contact-badge">${c.unreadCount}</span>` : '';
+            const lastMsg = c.lastMessage ? `<div class="chat-contact-last">${escapeHtml(c.lastMessage)}</div>` : '';
+            return `<div class="chat-contact-item" onclick="openChat(${c.userId},'${escapeHtml(c.username).replace(/'/g, "\\'")}')"> 
+                <div class="chat-contact-avatar">${avatarHtml}</div>
+                <div class="chat-contact-info">
+                    <div class="chat-contact-name">${statusIcon} ${escapeHtml(c.username)} ${unreadBadge}</div>
+                    ${lastMsg}
+                </div>
+            </div>`;
+        }).join('') + '</div>';
+    } catch {
+        body.innerHTML = '<div class="empty-state" style="padding:1rem;text-align:center"><p style="color:var(--text-muted)">Errore</p></div>';
+    }
+}
+
+async function openChat(userId, username) {
+    chatCurrentUserId = userId;
+    chatLastMsgId = 0;
+    document.getElementById('chatWidgetTitle').textContent = escapeHtml(username);
+    document.getElementById('chatBackBtn').style.display = '';
+    document.getElementById('chatWidgetInput').style.display = 'flex';
+    const body = document.getElementById('chatWidgetBody');
+    body.innerHTML = '<div class="loading" style="padding:1rem">Caricamento...</div>';
+    try {
+        const msgs = await api(`/chat/${userId}`);
+        renderChatMessages(msgs);
+        startChatPoll();
+        updateBadges();
+    } catch {
+        body.innerHTML = '<div class="empty-state" style="padding:1rem"><p>Errore</p></div>';
+    }
+    document.getElementById('chatMsgInput').focus();
+}
+
+function renderChatMessages(msgs) {
+    const body = document.getElementById('chatWidgetBody');
+    if (msgs.length === 0) {
+        body.innerHTML = '<div class="chat-messages-empty"><p>Nessun messaggio. Scrivi per primo!</p></div>';
+        return;
+    }
+    body.innerHTML = '<div class="chat-messages">' + msgs.map(m => {
+        const isMine = m.senderId === currentUser.userId;
+        chatLastMsgId = Math.max(chatLastMsgId, m.id);
+        return `<div class="chat-msg ${isMine ? 'chat-msg-mine' : 'chat-msg-other'}">
+            <div class="chat-msg-bubble">${escapeHtml(m.content)}</div>
+            <div class="chat-msg-time">${timeAgo(m.createdAt)}</div>
+        </div>`;
+    }).join('') + '</div>';
+    body.scrollTop = body.scrollHeight;
+}
+
+async function sendChatFromWidget() {
+    if (!chatCurrentUserId) return;
+    const input = document.getElementById('chatMsgInput');
+    const content = input.value.trim();
+    if (!content) return;
+    input.value = '';
+    try {
+        const msg = await api(`/chat/${chatCurrentUserId}`, {
+            method: 'POST',
+            body: JSON.stringify({ content })
+        });
+        // Append this message to the chat
+        const body = document.getElementById('chatWidgetBody');
+        const container = body.querySelector('.chat-messages');
+        if (container) {
+            const div = document.createElement('div');
+            div.className = 'chat-msg chat-msg-mine';
+            div.innerHTML = `<div class="chat-msg-bubble">${escapeHtml(msg.content)}</div><div class="chat-msg-time">ora</div>`;
+            container.appendChild(div);
+            chatLastMsgId = Math.max(chatLastMsgId, msg.id);
+            body.scrollTop = body.scrollHeight;
+        } else {
+            // First message in empty chat
+            renderChatMessages([msg]);
+        }
+    } catch (err) {
+        showToast(err.data?.error || 'Errore invio messaggio', 'error');
+    }
+}
+
+function startChatPoll() {
+    stopChatPoll();
+    chatPollInterval = setInterval(async () => {
+        if (!chatCurrentUserId) return;
+        try {
+            const newMsgs = await api(`/chat/${chatCurrentUserId}/new?afterId=${chatLastMsgId}`);
+            if (newMsgs.length > 0) {
+                const body = document.getElementById('chatWidgetBody');
+                let container = body.querySelector('.chat-messages');
+                if (!container) {
+                    body.innerHTML = '<div class="chat-messages"></div>';
+                    container = body.querySelector('.chat-messages');
+                }
+                for (const m of newMsgs) {
+                    if (m.senderId === currentUser.userId) continue; // already shown
+                    chatLastMsgId = Math.max(chatLastMsgId, m.id);
+                    const div = document.createElement('div');
+                    div.className = 'chat-msg chat-msg-other';
+                    div.innerHTML = `<div class="chat-msg-bubble">${escapeHtml(m.content)}</div><div class="chat-msg-time">ora</div>`;
+                    container.appendChild(div);
+                }
+                body.scrollTop = body.scrollHeight;
+                updateBadges();
+            }
+        } catch { /* ignore */ }
+    }, 3000);
+}
+
+function stopChatPoll() {
+    if (chatPollInterval) {
+        clearInterval(chatPollInterval);
+        chatPollInterval = null;
+    }
+}
+
+// Show chat toggle button when logged in
+function updateChatVisibility() {
+    const btn = document.getElementById('chatToggleBtn');
+    if (btn) btn.style.display = currentUser ? '' : 'none';
+    if (!currentUser) {
+        const widget = document.getElementById('chatWidget');
+        if (widget) widget.style.display = 'none';
+        stopChatPoll();
+    }
+}
+
+function openChatWith(userId, username) {
+    const widget = document.getElementById('chatWidget');
+    if (widget) widget.style.display = 'flex';
+    openChat(userId, username);
+}

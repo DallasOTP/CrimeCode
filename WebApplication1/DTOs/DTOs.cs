@@ -78,6 +78,11 @@ public record ListingDto(int Id, string Title, string Description, int Price, st
 public record ShoutboxDto(int Id, string Content, DateTime CreatedAt, string AuthorName, int AuthorId, string? AuthorAvatarUrl, string AuthorRole);
 public record ShoutboxPostRequest(string Content);
 
+// --- Live Chat ---
+public record ChatMessageDto(int Id, string Content, DateTime CreatedAt, bool IsRead, int SenderId, string SenderName, string? SenderAvatarUrl, int ReceiverId, string ReceiverName);
+public record SendChatRequest(string Content);
+public record ChatContactDto(int UserId, string Username, string? AvatarUrl, string Status, string? LastMessage, DateTime? LastMessageAt, int UnreadCount);
+
 // --- Leaderboard ---
 public record LeaderboardEntry(int Id, string Username, string? AvatarUrl, string Role, string RankName, string RankColor, string RankIcon,
     int PostCount, int ThreadCount, int ReputationScore, int Credits);

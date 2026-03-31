@@ -23,6 +23,7 @@ public class CrimeCodeDbContext : DbContext
     public DbSet<PostReaction> PostReactions => Set<PostReaction>();
     public DbSet<UserFollow> UserFollows => Set<UserFollow>();
     public DbSet<PostAttachment> PostAttachments => Set<PostAttachment>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -172,6 +173,20 @@ public class CrimeCodeDbContext : DbContext
              .WithMany(u => u.ShoutboxMessages)
              .HasForeignKey(s => s.AuthorId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ChatMessage
+        modelBuilder.Entity<ChatMessage>(e =>
+        {
+            e.HasOne(cm => cm.Sender)
+             .WithMany(u => u.SentChats)
+             .HasForeignKey(cm => cm.SenderId)
+             .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(cm => cm.Receiver)
+             .WithMany(u => u.ReceivedChats)
+             .HasForeignKey(cm => cm.ReceiverId)
+             .OnDelete(DeleteBehavior.Restrict);
         });
 
         // Seed categories (with sections/subsections)
