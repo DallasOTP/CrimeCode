@@ -44,11 +44,21 @@ public static class AuthEndpoints
             return Results.Ok(new AuthResponse(user.Id, user.Username, token));
         });
 
-        group.MapPost("/login", async (LoginRequest req, CrimeCodeDbContext db, AuthService auth) =>
+        group.MapPost("/login", async (LoginWith2FARequest req, CrimeCodeDbContext db, AuthService auth) =>
         {
             var user = await db.Users.FirstOrDefaultAsync(u => u.Email == req.Email);
             if (user is null || !BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
                 return Results.Unauthorized();
+
+            // 2FA check
+            if (user.Is2FAEnabled)
+            {
+                if (string.IsNullOrWhiteSpace(req.TotpCode))
+                    return Results.Json(new { requires2FA = true, error = "Inserisci il codice 2FA" }, statusCode: 401);
+
+                if (!TotpEndpoints.VerifyTotp(user.TotpSecret!, req.TotpCode))
+                    return Results.Json(new { requires2FA = true, error = "Codice 2FA non valido" }, statusCode: 401);
+            }
 
             var token = auth.GenerateToken(user.Id, user.Username, user.Role);
             return Results.Ok(new AuthResponse(user.Id, user.Username, token));

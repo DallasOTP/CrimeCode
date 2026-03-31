@@ -118,3 +118,54 @@ public record UserRankDto(int Id, string Name, string Color, string Icon, int Mi
 
 // --- Forum Stats ---
 public record ForumStatsDto(int TotalUsers, int TotalThreads, int TotalPosts, int OnlineUsers, string? NewestMember);
+
+// --- Vendor Reviews ---
+public record CreateReviewRequest(int OrderId, int Rating, string? Comment);
+public record VendorReviewDto(int Id, int OrderId, int Rating, string? Comment, DateTime CreatedAt, 
+    int BuyerId, string BuyerName, string? BuyerAvatarUrl, int SellerId, string SellerName);
+
+// --- Listing Images ---
+public record ListingImageDto(int Id, string Url, int SortOrder);
+public record AddListingImagesRequest(List<string> ImageUrls);
+
+// --- Crypto Wallet ---
+public record WalletDto(int Id, string Currency, decimal Balance, DateTime UpdatedAt);
+public record WalletTransactionDto(int Id, decimal Amount, string Type, string? Reference, string Currency, DateTime CreatedAt);
+public record DepositRequest(string Currency, decimal Amount, string TxId);
+public record WithdrawRequest(string Currency, decimal Amount, string WalletAddress);
+
+// --- Voucher ---
+public record CreateVoucherRequest(string Code, decimal DiscountPercent, decimal? MaxDiscount, int MaxUses, DateTime? ExpiresAt, int? ListingId);
+public record VoucherDto(int Id, string Code, decimal DiscountPercent, decimal? MaxDiscount, int MaxUses, int UsedCount, bool IsActive, DateTime? ExpiresAt, 
+    int SellerId, string SellerName, int? ListingId, string? ListingTitle);
+public record ApplyVoucherRequest(string Code, int ListingId);
+public record VoucherCheckResult(bool Valid, decimal DiscountPercent, decimal? MaxDiscount, string? Error);
+
+// --- Wishlist ---
+public record WishlistDto(int Id, int ListingId, string ListingTitle, string? ListingImageUrl, decimal PriceCrypto, string Currency, string SellerName, DateTime AddedAt);
+public record ToggleWishlistRequest(int ListingId);
+
+// --- 2FA TOTP ---
+public record TotpSetupResponse(string Secret, string QrCodeUri);
+public record TotpVerifyRequest(string Code);
+public record LoginWith2FARequest(string Email, string Password, string? TotpCode);
+
+// --- Vendor Stats ---
+public record VendorStatsDto(int TotalSales, decimal TotalRevenue, int ActiveListings, int PendingOrders, int DisputedOrders, 
+    double AverageRating, int TotalReviews, decimal MonthlyRevenue, int MonthlySales, List<MonthlyStat> Last6Months);
+public record MonthlyStat(string Month, int Sales, decimal Revenue);
+
+// --- Enhanced Listing DTOs ---
+public record ListingDetailExtendedDto(int Id, string Title, string Description, decimal PriceCrypto, string Currency, string Type, string Status, string DeliveryType,
+    DateTime CreatedAt, string SellerName, int SellerId, string? SellerAvatarUrl, bool IsVendor, string CategoryName, int CategoryId,
+    string? ImageUrl, int Stock, int SoldCount, string? ShippingInfo, int SellerReputation, int SellerSalesCount, string? VendorBio,
+    List<ListingImageDto> Images, List<VendorReviewDto> SellerReviews, double SellerAvgRating, bool InWishlist);
+
+// --- Marketplace Search ---
+public record MarketplaceSearchRequest(string? Query, int? CategoryId, string? Currency, decimal? MinPrice, decimal? MaxPrice, string? Type, string? SortBy, int Page = 1, int PageSize = 20);
+
+// --- Admin Marketplace ---
+public record AdminListingDto(int Id, string Title, string SellerName, int SellerId, string Status, string CategoryName, decimal PriceCrypto, string Currency, DateTime CreatedAt, string? RejectionReason);
+public record AdminReviewListingRequest(string Status, string? RejectionReason); // Approved or Rejected
+public record AdminDisputeDto(int OrderId, string ListingTitle, string BuyerName, string SellerName, string? DisputeReason, decimal Amount, string Currency, string Status, DateTime CreatedAt);
+public record AdminResolveDisputeRequest(string Resolution, string? Note); // RefundBuyer or ReleaseSeller

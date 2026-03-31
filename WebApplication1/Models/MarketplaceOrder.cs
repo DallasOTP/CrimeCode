@@ -35,4 +35,10 @@ public class MarketplaceOrder
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
+
+    // Voucher discount
+    public string? VoucherCode { get; set; }
+    public decimal DiscountAmount { get; set; } = 0;
+
+    public VendorReview? Review { get; set; }
 }

@@ -26,6 +26,12 @@ public class CrimeCodeDbContext : DbContext
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<MarketplaceOrder> MarketplaceOrders => Set<MarketplaceOrder>();
     public DbSet<VendorApplication> VendorApplications => Set<VendorApplication>();
+    public DbSet<VendorReview> VendorReviews => Set<VendorReview>();
+    public DbSet<ListingImage> ListingImages => Set<ListingImage>();
+    public DbSet<CryptoWallet> CryptoWallets => Set<CryptoWallet>();
+    public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
+    public DbSet<Voucher> Vouchers => Set<Voucher>();
+    public DbSet<Wishlist> Wishlists => Set<Wishlist>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -235,6 +241,61 @@ public class CrimeCodeDbContext : DbContext
              .WithMany()
              .HasForeignKey(va => va.UserId)
              .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // VendorReview
+        modelBuilder.Entity<VendorReview>(e =>
+        {
+            e.HasIndex(vr => vr.OrderId).IsUnique(); // one review per order
+            e.HasOne(vr => vr.Order).WithOne(o => o.Review).HasForeignKey<VendorReview>(vr => vr.OrderId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(vr => vr.Buyer).WithMany(u => u.ReviewsGiven).HasForeignKey(vr => vr.BuyerId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(vr => vr.Seller).WithMany(u => u.ReviewsReceived).HasForeignKey(vr => vr.SellerId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ListingImage
+        modelBuilder.Entity<ListingImage>(e =>
+        {
+            e.HasOne(li => li.Listing).WithMany(l => l.Images).HasForeignKey(li => li.ListingId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // CryptoWallet
+        modelBuilder.Entity<CryptoWallet>(e =>
+        {
+            e.Property(w => w.Balance).HasColumnType("decimal(18,8)");
+            e.HasIndex(w => new { w.UserId, w.Currency }).IsUnique();
+            e.HasOne(w => w.User).WithMany(u => u.Wallets).HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // WalletTransaction
+        modelBuilder.Entity<WalletTransaction>(e =>
+        {
+            e.Property(wt => wt.Amount).HasColumnType("decimal(18,8)");
+            e.HasOne(wt => wt.Wallet).WithMany().HasForeignKey(wt => wt.WalletId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(wt => wt.User).WithMany(u => u.WalletTransactions).HasForeignKey(wt => wt.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Voucher
+        modelBuilder.Entity<Voucher>(e =>
+        {
+            e.HasIndex(v => v.Code).IsUnique();
+            e.Property(v => v.DiscountPercent).HasColumnType("decimal(5,2)");
+            e.Property(v => v.MaxDiscount).HasColumnType("decimal(18,8)");
+            e.HasOne(v => v.Seller).WithMany(u => u.Vouchers).HasForeignKey(v => v.SellerId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(v => v.Listing).WithMany(l => l.Vouchers).HasForeignKey(v => v.ListingId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Wishlist
+        modelBuilder.Entity<Wishlist>(e =>
+        {
+            e.HasIndex(w => new { w.UserId, w.ListingId }).IsUnique();
+            e.HasOne(w => w.User).WithMany(u => u.Wishlists).HasForeignKey(w => w.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(w => w.Listing).WithMany(l => l.Wishlists).HasForeignKey(w => w.ListingId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // MarketplaceOrder - VoucherDiscount
+        modelBuilder.Entity<MarketplaceOrder>(e =>
+        {
+            e.Property(o => o.DiscountAmount).HasColumnType("decimal(18,8)");
         });
 
         // Seed categories (with sections/subsections)

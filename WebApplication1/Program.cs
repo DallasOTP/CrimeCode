@@ -71,6 +71,12 @@ app.MapAttachmentEndpoints();
 app.MapSearchEndpoints();
 app.MapStatusEndpoints();
 app.MapChatEndpoints();
+app.MapReviewEndpoints();
+app.MapWalletEndpoints();
+app.MapVoucherEndpoints();
+app.MapWishlistEndpoints();
+app.MapTotpEndpoints();
+app.MapVendorStatsEndpoints();
 
 // Fallback to index.html for SPA routing
 app.MapFallbackToFile("index.html");

@@ -2561,3 +2561,134 @@ body.light-theme pre { background: #2d3748; color: #e2e8f0; }
 .online-indicator.away { background: #eab308; box-shadow: 0 0 6px rgba(234, 179, 8, 0.5); }
 .online-indicator.busy { background: var(--danger); box-shadow: 0 0 6px rgba(255, 0, 0, 0.5); }
 .online-indicator.offline { background: #6b7280; box-shadow: none; }
+
+/* === Wallet === */
+.wallet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.wallet-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.2rem;
+    display: flex; flex-direction: column; gap: 0.8rem;
+}
+.wallet-currency { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+.wallet-balance { font-size: 1.8rem; font-weight: 800; color: var(--text-primary); }
+.wallet-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.wallet-actions input { flex: 1; min-width: 100px; }
+.tx-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.tx-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 0.6rem 0.8rem;
+}
+.tx-item.tx-in { border-left: 3px solid #22c55e; }
+.tx-item.tx-out { border-left: 3px solid #ef4444; }
+.tx-info { display: flex; flex-direction: column; gap: 0.15rem; }
+.tx-type { font-weight: 600; font-size: 0.85rem; }
+.tx-ref { font-size: 0.75rem; color: var(--text-secondary); }
+.tx-amount { font-weight: 700; font-size: 0.95rem; }
+.tx-amount.positive { color: #22c55e; }
+.tx-amount.negative { color: #ef4444; }
+.tx-date { font-size: 0.7rem; color: var(--text-secondary); }
+
+/* === Voucher === */
+.voucher-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+.voucher-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem;
+    display: flex; flex-direction: column; gap: 0.5rem;
+    position: relative;
+}
+.voucher-card.inactive { opacity: 0.5; }
+.voucher-code {
+    font-family: monospace; font-size: 1.2rem; font-weight: 700;
+    color: var(--accent); letter-spacing: 2px;
+    background: var(--bg-input); padding: 0.4rem 0.6rem;
+    border-radius: var(--radius-sm); text-align: center;
+}
+.voucher-info { font-size: 0.85rem; color: var(--text-secondary); }
+.voucher-info span { display: block; margin-bottom: 0.15rem; }
+.voucher-actions { display: flex; gap: 0.5rem; margin-top: 0.3rem; }
+
+/* === Wishlist === */
+.wishlist-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.wishlist-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; transition: transform 0.2s; }
+.wishlist-btn:hover { transform: scale(1.2); }
+.wishlist-btn.active { color: #ef4444; }
+
+/* === 2FA Settings === */
+.twofa-status {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.5rem;
+    text-align: center; max-width: 500px; margin: 0 auto;
+}
+.twofa-status .status-badge {
+    font-size: 1.1rem; font-weight: 700; padding: 0.4rem 1rem;
+    border-radius: var(--radius-sm); display: inline-block; margin-bottom: 1rem;
+}
+.twofa-status .status-badge.enabled { background: rgba(34,197,94,0.15); color: #22c55e; }
+.twofa-status .status-badge.disabled { background: rgba(239,68,68,0.15); color: #ef4444; }
+.twofa-setup-box {
+    background: var(--bg-input); border-radius: var(--radius-sm);
+    padding: 1rem; margin: 1rem 0;
+}
+.twofa-secret {
+    font-family: monospace; font-size: 0.95rem; font-weight: 700;
+    color: var(--accent); word-break: break-all;
+    background: var(--bg-card); padding: 0.5rem; border-radius: var(--radius-sm);
+    margin: 0.5rem 0; letter-spacing: 2px;
+}
+
+/* === Vendor Stats === */
+.stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem; margin-bottom: 1.5rem;
+}
+.stat-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem; text-align: center;
+}
+.stat-card .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--accent); }
+.stat-card .stat-label { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.3rem; }
+.monthly-stats { display: flex; flex-direction: column; gap: 0.5rem; }
+.monthly-stat {
+    display: flex; align-items: center; gap: 0.8rem;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 0.5rem 0.8rem;
+}
+.monthly-label { min-width: 70px; font-size: 0.8rem; color: var(--text-secondary); }
+.monthly-bar {
+    flex: 1; height: 20px; background: var(--bg-input);
+    border-radius: 10px; overflow: hidden; position: relative;
+}
+.monthly-bar-fill {
+    height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-secondary, var(--accent)));
+    border-radius: 10px; transition: width 0.3s;
+}
+.monthly-value { min-width: 80px; text-align: right; font-weight: 700; font-size: 0.85rem; }
+
+/* === Dispute Card === */
+.dispute-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem; margin-bottom: 0.8rem;
+}
+.dispute-card .dispute-header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+.dispute-card .dispute-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+
+/* === Review Form === */
+.review-form-box {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem; margin-top: 1rem;
+}
+.review-form-box h3 { margin-bottom: 0.8rem; font-size: 1rem; }
+.review-form-box select, .review-form-box textarea {
+    width: 100%; padding: 0.5rem; background: var(--bg-input);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text-primary); margin-bottom: 0.5rem;
+}
+
+/* === Page Header Row === */
+.page-header-row {
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 0.8rem; margin-bottom: 1rem;
+}

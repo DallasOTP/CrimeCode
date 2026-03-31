@@ -26,4 +26,7 @@ public class MarketplaceListing
     public Category Category { get; set; } = null!;
 
     public ICollection<MarketplaceOrder> Orders { get; set; } = [];
+    public ICollection<ListingImage> Images { get; set; } = [];
+    public ICollection<Wishlist> Wishlists { get; set; } = [];
+    public ICollection<Voucher> Vouchers { get; set; } = [];
 }

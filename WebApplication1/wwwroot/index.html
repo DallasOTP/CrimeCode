@@ -78,11 +78,16 @@
                         <a href="#" onclick="navigate('messages')">✉️ Messaggi</a>
                         <a href="#" onclick="navigate('notifications')">🔔 Notifiche</a>
                         <a href="#" onclick="navigate('myOrders')">📋 Ordini</a>
+                        <a href="#" onclick="navigate('wallet')">💰 Wallet</a>
+                        <a href="#" onclick="navigate('wishlist')">❤️ Wishlist</a>
                         <a href="#" id="vendorPanelLink" style="display:none" onclick="navigate('myListings')">📦 Vendor Panel</a>
+                        <a href="#" id="vendorVouchersLink" style="display:none" onclick="navigate('vouchers')">🎟️ Voucher</a>
+                        <a href="#" id="vendorStatsLink" style="display:none" onclick="navigate('vendorStats')">📊 Statistiche</a>
                         <div class="dropdown-divider"></div>
                         <a href="#" onclick="showModal('newThread')">📝 Nuovo Thread</a>
                         <div class="dropdown-divider"></div>
                         <a href="#" onclick="showModal('avatar')">📷 Avatar</a>
+                        <a href="#" onclick="navigate('settings2fa')">🔐 2FA</a>
                         <a href="#" id="adminLink" style="display:none" onclick="navigate('admin')">⚙️ Admin</a>
                         <div class="dropdown-divider"></div>
                         <a href="#" onclick="logout()">🚪 Esci</a>
@@ -252,6 +257,39 @@
             <div class="online-users-grid" id="onlineUsersGrid"></div>
         </div>
 
+        <!-- Wallet -->
+        <div id="pageWallet" style="display:none">
+            <h2>💰 Crypto Wallet</h2>
+            <div id="walletContent"></div>
+        </div>
+
+        <!-- Wishlist -->
+        <div id="pageWishlist" style="display:none">
+            <h2>❤️ Wishlist</h2>
+            <div id="wishlistContent"></div>
+        </div>
+
+        <!-- Vouchers -->
+        <div id="pageVouchers" style="display:none">
+            <div class="page-header-row">
+                <h2>🎟️ I Miei Voucher</h2>
+                <button class="btn btn-primary" onclick="showCreateVoucherModal()">+ Nuovo Voucher</button>
+            </div>
+            <div id="vouchersContent"></div>
+        </div>
+
+        <!-- Vendor Stats -->
+        <div id="pageVendorStats" style="display:none">
+            <h2>📊 Statistiche Venditore</h2>
+            <div id="vendorStatsContent"></div>
+        </div>
+
+        <!-- 2FA Settings -->
+        <div id="page2FA" style="display:none">
+            <h2>🔐 Autenticazione a Due Fattori (2FA)</h2>
+            <div id="twofaContent"></div>
+        </div>
+
         <!-- Admin -->
         <div id="pageAdmin" style="display:none">
             <div class="admin-panel" id="adminPanel"></div>
@@ -408,6 +446,22 @@
                     <input type="text" id="repComment" placeholder="Commento (opzionale)" maxlength="200">
                     <div class="modal-error" id="repError"></div>
                     <button type="submit" class="btn btn-primary btn-full">Conferma</button>
+                </form>
+            </div>
+
+            <div id="modalCreateVoucher" style="display:none">
+                <h2>🎟️ Nuovo Voucher</h2>
+                <form onsubmit="createVoucher(event)">
+                    <input type="text" id="voucherCode" placeholder="Codice voucher (es: SCONTO20)" required minlength="3" maxlength="30" style="text-transform:uppercase">
+                    <input type="number" id="voucherDiscount" placeholder="Sconto %" min="1" max="100" required>
+                    <input type="number" id="voucherMaxDiscount" placeholder="Sconto massimo in crypto (opzionale)" min="0" step="0.0001">
+                    <input type="number" id="voucherMaxUses" placeholder="Utilizzi massimi (opzionale)" min="1">
+                    <input type="date" id="voucherExpiry" placeholder="Scadenza (opzionale)">
+                    <select id="voucherListing">
+                        <option value="">Tutti i miei annunci</option>
+                    </select>
+                    <div class="modal-error" id="voucherError"></div>
+                    <button type="submit" class="btn btn-primary btn-full">Crea Voucher</button>
                 </form>
             </div>
         </div>

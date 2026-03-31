@@ -23,6 +23,10 @@ public class User
     public DateTime? VendorApprovedAt { get; set; }
     public string? VendorBio { get; set; }
 
+    // TOTP 2FA
+    public string? TotpSecret { get; set; }
+    public bool Is2FAEnabled { get; set; } = false;
+
     public ICollection<ForumThread> Threads { get; set; } = [];
     public ICollection<Post> Posts { get; set; } = [];
     public ICollection<PostLike> Likes { get; set; } = [];
@@ -42,4 +46,10 @@ public class User
     public ICollection<ChatMessage> ReceivedChats { get; set; } = [];
     public ICollection<MarketplaceOrder> BuyerOrders { get; set; } = [];
     public ICollection<MarketplaceOrder> SellerOrders { get; set; } = [];
+    public ICollection<CryptoWallet> Wallets { get; set; } = [];
+    public ICollection<WalletTransaction> WalletTransactions { get; set; } = [];
+    public ICollection<VendorReview> ReviewsGiven { get; set; } = [];
+    public ICollection<VendorReview> ReviewsReceived { get; set; } = [];
+    public ICollection<Wishlist> Wishlists { get; set; } = [];
+    public ICollection<Voucher> Vouchers { get; set; } = [];
 }

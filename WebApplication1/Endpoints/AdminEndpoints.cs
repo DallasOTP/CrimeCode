@@ -229,6 +229,146 @@ public static class AdminEndpoints
             await db.SaveChangesAsync();
             return Results.Ok(new { user.Id, user.Credits });
         });
+
+        // --- Admin Marketplace --- 
+
+        // Pending listings
+        group.MapGet("/marketplace/pending", async (ClaimsPrincipal principal, CrimeCodeDbContext db) =>
+        {
+            if (!IsAdmin(principal) && !IsModerator(principal)) return Results.Forbid();
+            var listings = await db.MarketplaceListings
+                .Include(l => l.Seller).Include(l => l.Category)
+                .Where(l => l.Status == "PendingApproval")
+                .OrderBy(l => l.CreatedAt)
+                .Select(l => new AdminListingDto(l.Id, l.Title, l.Seller.Username, l.SellerId, l.Status, l.Category.Name, l.PriceCrypto, l.Currency, l.CreatedAt, l.RejectionReason))
+                .ToListAsync();
+            return Results.Ok(listings);
+        });
+
+        // Review listing (approve/reject)
+        group.MapPut("/marketplace/{id:int}/review", async (int id, AdminReviewListingRequest req, ClaimsPrincipal principal, CrimeCodeDbContext db) =>
+        {
+            if (!IsAdmin(principal) && !IsModerator(principal)) return Results.Forbid();
+            var listing = await db.MarketplaceListings.FindAsync(id);
+            if (listing is null) return Results.NotFound();
+
+            if (req.Status == "Approved")
+            {
+                listing.Status = "Active";
+                listing.RejectionReason = null;
+            }
+            else if (req.Status == "Rejected")
+            {
+                listing.Status = "Rejected";
+                listing.RejectionReason = req.RejectionReason;
+            }
+            else return Results.BadRequest(new { error = "Status deve essere Approved o Rejected" });
+
+            listing.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+
+            // Notify seller
+            db.Notifications.Add(new Notification
+            {
+                UserId = listing.SellerId,
+                Type = "listing_review",
+                Message = req.Status == "Approved"
+                    ? $"Il tuo annuncio \"{listing.Title}\" è stato approvato!"
+                    : $"Il tuo annuncio \"{listing.Title}\" è stato rifiutato: {req.RejectionReason}"
+            });
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { listing.Id, listing.Status });
+        });
+
+        // Vendor applications
+        group.MapGet("/vendors/pending", async (ClaimsPrincipal principal, CrimeCodeDbContext db) =>
+        {
+            if (!IsAdmin(principal)) return Results.Forbid();
+            var apps = await db.VendorApplications
+                .Include(a => a.User)
+                .Where(a => a.Status == "Pending")
+                .OrderBy(a => a.CreatedAt)
+                .Select(a => new VendorApplicationDto(a.Id, a.UserId, a.User.Username, a.User.AvatarUrl, a.TelegramUsername, a.Motivation, a.Specialization, a.Status, a.ReviewNote, a.CreatedAt, a.ReviewedAt))
+                .ToListAsync();
+            return Results.Ok(apps);
+        });
+
+        // All disputes
+        group.MapGet("/disputes", async (ClaimsPrincipal principal, CrimeCodeDbContext db) =>
+        {
+            if (!IsAdmin(principal) && !IsModerator(principal)) return Results.Forbid();
+            var disputes = await db.MarketplaceOrders
+                .Include(o => o.Listing).Include(o => o.Buyer).Include(o => o.Seller)
+                .Where(o => o.Status == "Disputed")
+                .OrderBy(o => o.UpdatedAt)
+                .Select(o => new AdminDisputeDto(o.Id, o.Listing.Title, o.Buyer.Username, o.Seller.Username, o.DisputeReason, o.Amount, o.Currency, o.Status, o.CreatedAt))
+                .ToListAsync();
+            return Results.Ok(disputes);
+        });
+
+        // Resolve dispute
+        group.MapPut("/disputes/{id:int}/resolve", async (int id, AdminResolveDisputeRequest req, ClaimsPrincipal principal, CrimeCodeDbContext db) =>
+        {
+            if (!IsAdmin(principal)) return Results.Forbid();
+            var order = await db.MarketplaceOrders.FirstOrDefaultAsync(o => o.Id == id);
+            if (order is null) return Results.NotFound();
+            if (order.Status != "Disputed") return Results.BadRequest(new { error = "Ordine non in disputa" });
+
+            if (req.Resolution == "RefundBuyer")
+            {
+                order.EscrowStatus = "Refunded";
+                order.Status = "Refunded";
+                order.AdminNote = req.Note;
+            }
+            else if (req.Resolution == "ReleaseSeller")
+            {
+                order.EscrowStatus = "Released";
+                order.ReleasedAt = DateTime.UtcNow;
+                order.Status = "Completed";
+                order.AdminNote = req.Note;
+            }
+            else return Results.BadRequest(new { error = "Resolution: RefundBuyer o ReleaseSeller" });
+
+            order.UpdatedAt = DateTime.UtcNow;
+
+            db.Notifications.Add(new Notification
+            {
+                UserId = order.BuyerId,
+                Type = "dispute_resolved",
+                Message = $"La disputa per l'ordine #{order.Id} è stata risolta: {req.Resolution}"
+            });
+            db.Notifications.Add(new Notification
+            {
+                UserId = order.SellerId,
+                Type = "dispute_resolved",
+                Message = $"La disputa per l'ordine #{order.Id} è stata risolta: {req.Resolution}"
+            });
+
+            await db.SaveChangesAsync();
+            return Results.Ok(new { order.Id, order.Status, order.EscrowStatus });
+        });
+
+        // Auto-complete expired orders
+        group.MapPost("/orders/auto-complete", async (ClaimsPrincipal principal, CrimeCodeDbContext db) =>
+        {
+            if (!IsAdmin(principal)) return Results.Forbid();
+            var cutoff = DateTime.UtcNow.AddHours(-72);
+            var toComplete = await db.MarketplaceOrders
+                .Where(o => (o.Status == "Delivered" || o.Status == "Shipped") && o.UpdatedAt < cutoff && o.EscrowStatus == "Funded")
+                .ToListAsync();
+
+            foreach (var order in toComplete)
+            {
+                order.EscrowStatus = "Released";
+                order.ReleasedAt = DateTime.UtcNow;
+                order.Status = "Completed";
+                order.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await db.SaveChangesAsync();
+            return Results.Ok(new { completedCount = toComplete.Count });
+        });
     }
 
     private static bool IsAdmin(ClaimsPrincipal principal) =>

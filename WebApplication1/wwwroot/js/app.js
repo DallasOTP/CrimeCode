@@ -180,6 +180,26 @@ function navigate(page, params = {}) {
             document.getElementById('pageAdmin').style.display = '';
             loadAdmin();
             break;
+        case 'wallet':
+            document.getElementById('pageWallet').style.display = '';
+            loadWallet();
+            break;
+        case 'wishlist':
+            document.getElementById('pageWishlist').style.display = '';
+            loadWishlist();
+            break;
+        case 'vouchers':
+            document.getElementById('pageVouchers').style.display = '';
+            loadMyVouchers();
+            break;
+        case 'vendorStats':
+            document.getElementById('pageVendorStats').style.display = '';
+            loadVendorStats();
+            break;
+        case 'settings2fa':
+            document.getElementById('page2FA').style.display = '';
+            load2FASettings();
+            break;
     }
     closeUserMenu();
     window.scrollTo(0, 0);
@@ -222,6 +242,8 @@ function updateAuthUI() {
         const myListingsBtn = document.getElementById('myListingsBtn');
         const myOrdersBtn = document.getElementById('myOrdersBtn');
         const vendorPanelLink = document.getElementById('vendorPanelLink');
+        const vendorVouchersLink = document.getElementById('vendorVouchersLink');
+        const vendorStatsLink = document.getElementById('vendorStatsLink');
         if (myOrdersBtn) myOrdersBtn.style.display = '';
         
         // Check vendor status
@@ -230,6 +252,8 @@ function updateAuthUI() {
             if (vendorApplyBtn) vendorApplyBtn.style.display = isVendor ? 'none' : '';
             if (myListingsBtn) myListingsBtn.style.display = isVendor ? '' : 'none';
             if (vendorPanelLink) vendorPanelLink.style.display = isVendor ? '' : 'none';
+            if (vendorVouchersLink) vendorVouchersLink.style.display = isVendor ? '' : 'none';
+            if (vendorStatsLink) vendorStatsLink.style.display = isVendor ? '' : 'none';
         });
         updateChatVisibility();
     } else {
@@ -276,20 +300,35 @@ async function login(e) {
     const errEl = document.getElementById('loginError');
     errEl.textContent = '';
     try {
+        const body = {
+            email: document.getElementById('loginEmail').value.trim(),
+            password: document.getElementById('loginPassword').value,
+            totpCode: document.getElementById('login2FACode')?.value?.trim() || null
+        };
         const data = await api('/auth/login', {
             method: 'POST',
-            body: JSON.stringify({
-                email: document.getElementById('loginEmail').value.trim(),
-                password: document.getElementById('loginPassword').value
-            })
+            body: JSON.stringify(body)
         });
         currentUser = data;
         localStorage.setItem('crimecode_user', JSON.stringify(data));
         refreshMe();
         closeModal();
         loadHome();
-    } catch {
-        errEl.textContent = 'Email o password non validi';
+    } catch (err) {
+        if (err.data?.requires2FA) {
+            errEl.textContent = err.data.error || 'Inserisci il codice 2FA';
+            const existing = document.getElementById('login2FAGroup');
+            if (!existing) {
+                const form = document.querySelector('#loginForm form, #loginModal form') || errEl.parentElement;
+                const grp = document.createElement('div');
+                grp.id = 'login2FAGroup';
+                grp.className = 'form-group';
+                grp.innerHTML = '<label>Codice 2FA</label><input type="text" id="login2FACode" placeholder="123456" maxlength="6" autocomplete="one-time-code">';
+                form.insertBefore(grp, errEl);
+            }
+        } else {
+            errEl.textContent = 'Email o password non validi';
+        }
     }
 }
 
@@ -1270,6 +1309,7 @@ async function loadListingDetail(id) {
                         ${currentUser && currentUser.userId !== l.sellerId && l.stock > 0 && l.status === 'Active' ? `
                             <button class="btn btn-primary btn-lg" onclick="showOrderModal(${l.id}, '${escapeHtml(l.title)}', ${l.priceCrypto}, '${escapeHtml(l.currency)}', '${l.deliveryType}', ${l.stock})">🛒 Acquista con Escrow</button>
                         ` : ''}
+                        ${currentUser ? `<button class="btn btn-outline" onclick="toggleWishlist(${l.id})">❤️ Wishlist</button>` : ''}
                         ${currentUser && currentUser.userId !== l.sellerId ? `
                             <button class="btn btn-outline" onclick="navigate('messages',{userId:${l.sellerId}})">✉️ Contatta Venditore</button>
                         ` : ''}
@@ -1611,6 +1651,19 @@ async function loadOrderDetail(id) {
                             <button class="btn btn-primary" onclick="fundEscrow(${o.id})">💰 Conferma Pagamento</button>
                         </div>` : ''}
                     ${isBuyer && (o.status === 'Delivered' || o.status === 'Shipped') ? `<button class="btn btn-primary btn-lg" onclick="confirmOrder(${o.id})">✅ Conferma Ricezione (Rilascia Escrow)</button>` : ''}
+                    ${isBuyer && o.status === 'Completed' ? `
+                        <div class="review-form-box" id="reviewFormBox">
+                            <h3>⭐ Lascia una Recensione</h3>
+                            <div class="form-group">
+                                <label>Rating</label>
+                                <select id="reviewRating"><option value="5">⭐⭐⭐⭐⭐ (5)</option><option value="4">⭐⭐⭐⭐ (4)</option><option value="3">⭐⭐⭐ (3)</option><option value="2">⭐⭐ (2)</option><option value="1">⭐ (1)</option></select>
+                            </div>
+                            <div class="form-group">
+                                <label>Commento (opzionale)</label>
+                                <textarea id="reviewComment" rows="2" placeholder="La tua esperienza..."></textarea>
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="submitReview(${o.id})">📝 Invia Recensione</button>
+                        </div>` : ''}
                     ${isBuyer && o.escrowStatus === 'Funded' && o.status !== 'Completed' ? `<button class="btn btn-danger" onclick="disputeOrder(${o.id})">⚠️ Apri Disputa</button>` : ''}
                     ${isSeller && o.escrowStatus === 'Funded' && o.deliveryType === 'Shipping' && o.status === 'EscrowFunded' ? `
                         <div class="ship-form">
@@ -1917,10 +1970,13 @@ async function loadAdmin() {
     const panel = document.getElementById('adminPanel');
     panel.innerHTML = `
         <h2>⚙️ Pannello Admin</h2>
-        <div class="profile-tabs" style="margin-bottom:1rem">
+        <div class="profile-tabs" style="margin-bottom:1rem;flex-wrap:wrap">
             <button class="${adminTab === 'stats' ? 'active' : ''}" onclick="adminTab='stats';loadAdmin()">📊 Stats</button>
             <button class="${adminTab === 'users' ? 'active' : ''}" onclick="adminTab='users';loadAdmin()">👥 Utenti</button>
             <button class="${adminTab === 'threads' ? 'active' : ''}" onclick="adminTab='threads';loadAdmin()">📝 Thread</button>
+            <button class="${adminTab === 'listings' ? 'active' : ''}" onclick="adminTab='listings';loadAdmin()">🏪 Annunci</button>
+            <button class="${adminTab === 'vendorApps' ? 'active' : ''}" onclick="adminTab='vendorApps';loadAdmin()">📋 Vendor</button>
+            <button class="${adminTab === 'disputes' ? 'active' : ''}" onclick="adminTab='disputes';loadAdmin()">⚠️ Dispute</button>
         </div>
         <div id="adminContent"><div class="loading">Caricamento</div></div>`;
 
@@ -1944,6 +2000,12 @@ async function loadAdmin() {
             await loadAdminUsers(content);
         } else if (adminTab === 'threads') {
             await loadAdminThreads(content);
+        } else if (adminTab === 'listings') {
+            await loadAdminListings(content);
+        } else if (adminTab === 'vendorApps') {
+            await loadAdminVendorApps(content);
+        } else if (adminTab === 'disputes') {
+            await loadAdminDisputes(content);
         }
     } catch (err) {
         content.innerHTML = err.status === 403
@@ -2488,4 +2550,388 @@ function openChatWith(userId, username) {
     const widget = document.getElementById('chatWidget');
     if (widget) widget.style.display = 'flex';
     openChat(userId, username);
+}
+
+// === Admin: Pending Listings ===
+async function loadAdminListings(container) {
+    const listings = await api('/admin/marketplace/pending');
+    if (!listings || listings.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><p>Nessun annuncio in attesa</p></div>';
+        return;
+    }
+    container.innerHTML = listings.map(l => `
+        <div class="admin-user-card">
+            <div class="admin-user-info">
+                <div class="admin-user-name">${escapeHtml(l.title)}</div>
+                <div class="admin-user-meta">${escapeHtml(l.sellerName)} · ${l.priceCrypto} ${escapeHtml(l.currency)} · ${escapeHtml(l.categoryName)} · ${timeAgo(l.createdAt)}</div>
+            </div>
+            <div class="admin-user-actions">
+                <button class="btn btn-sm btn-primary" onclick="adminReviewListing(${l.id},'Approved')">✅ Approva</button>
+                <button class="btn btn-sm btn-danger" onclick="adminReviewListing(${l.id},'Rejected')">❌ Rifiuta</button>
+            </div>
+        </div>`).join('');
+}
+
+async function adminReviewListing(id, status) {
+    let rejectionReason = null;
+    if (status === 'Rejected') {
+        rejectionReason = prompt('Motivo del rifiuto:');
+        if (rejectionReason === null) return;
+    }
+    try {
+        await api(`/admin/marketplace/${id}/review`, { method: 'PUT', body: JSON.stringify({ status, rejectionReason }) });
+        showToast(status === 'Approved' ? 'Annuncio approvato!' : 'Annuncio rifiutato', 'success');
+        loadAdmin();
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+// === Admin: Vendor Applications ===
+async function loadAdminVendorApps(container) {
+    const apps = await api('/admin/vendors/pending');
+    if (!apps || apps.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><p>Nessuna richiesta in attesa</p></div>';
+        return;
+    }
+    container.innerHTML = apps.map(a => `
+        <div class="admin-user-card">
+            <div class="post-author-avatar" style="width:32px;height:32px;font-size:14px">${a.avatarUrl ? `<img src="${escapeHtml(a.avatarUrl)}" style="width:100%;height:100%;border-radius:50%">` : a.username.charAt(0).toUpperCase()}</div>
+            <div class="admin-user-info">
+                <div class="admin-user-name">${escapeHtml(a.username)}</div>
+                <div class="admin-user-meta">📱 ${escapeHtml(a.telegramUsername)} · ${a.specialization ? escapeHtml(a.specialization) : 'N/A'}</div>
+                <div class="admin-user-meta" style="margin-top:2px"><em>"${escapeHtml(a.motivation)}"</em></div>
+            </div>
+            <div class="admin-user-actions">
+                <button class="btn btn-sm btn-primary" onclick="adminReviewVendor(${a.id},'Approved')">✅ Approva</button>
+                <button class="btn btn-sm btn-danger" onclick="adminReviewVendor(${a.id},'Rejected')">❌ Rifiuta</button>
+            </div>
+        </div>`).join('');
+}
+
+async function adminReviewVendor(appId, status) {
+    let reviewNote = null;
+    if (status === 'Rejected') {
+        reviewNote = prompt('Motivo del rifiuto:');
+        if (reviewNote === null) return;
+    }
+    try {
+        await api(`/vendor/applications/${appId}/review`, { method: 'PUT', body: JSON.stringify({ status, reviewNote }) });
+        showToast(status === 'Approved' ? 'Venditore approvato!' : 'Richiesta rifiutata', 'success');
+        loadAdmin();
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+// === Admin: Disputes ===
+async function loadAdminDisputes(container) {
+    const disputes = await api('/admin/disputes');
+    if (!disputes || disputes.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">✅</div><p>Nessuna disputa attiva</p></div>';
+        return;
+    }
+    container.innerHTML = disputes.map(d => `
+        <div class="admin-user-card dispute-card">
+            <div class="admin-user-info">
+                <div class="admin-user-name">Ordine #${d.orderId} — ${escapeHtml(d.listingTitle)}</div>
+                <div class="admin-user-meta">🛒 ${escapeHtml(d.buyerName)} → 🏪 ${escapeHtml(d.sellerName)} · ${d.amount} ${escapeHtml(d.currency)}</div>
+                ${d.disputeReason ? `<div class="admin-user-meta" style="color:var(--accent-red)">⚠️ ${escapeHtml(d.disputeReason)}</div>` : ''}
+            </div>
+            <div class="admin-user-actions">
+                <button class="btn btn-sm btn-primary" onclick="adminResolveDispute(${d.orderId},'ReleaseSeller')">💰 Rilascia al Venditore</button>
+                <button class="btn btn-sm btn-danger" onclick="adminResolveDispute(${d.orderId},'RefundBuyer')">💸 Rimborsa Acquirente</button>
+            </div>
+        </div>`).join('');
+}
+
+async function adminResolveDispute(orderId, resolution) {
+    const note = prompt('Nota sulla risoluzione:');
+    if (note === null) return;
+    try {
+        await api(`/admin/disputes/${orderId}/resolve`, { method: 'PUT', body: JSON.stringify({ resolution, note }) });
+        showToast('Disputa risolta!', 'success');
+        loadAdmin();
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+// === Wallet ===
+async function loadWallet() {
+    const container = document.getElementById('walletContent');
+    container.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const wallets = await api('/wallet');
+        const txData = await api('/wallet/transactions');
+        container.innerHTML = `
+            <h2>💰 I Miei Wallet</h2>
+            <div class="wallet-grid">
+                ${['BTC','ETH','USDT','LTC','XMR'].map(c => {
+                    const w = wallets.find(w => w.currency === c);
+                    return `<div class="wallet-card">
+                        <div class="wallet-currency">${c}</div>
+                        <div class="wallet-balance">${w ? w.balance.toFixed(8) : '—'}</div>
+                        ${w ? `
+                            <div class="wallet-actions">
+                                <button class="btn btn-sm btn-primary" onclick="walletDeposit('${c}')">📥 Deposita</button>
+                                <button class="btn btn-sm btn-outline" onclick="walletWithdraw('${c}')">📤 Preleva</button>
+                            </div>` : `
+                            <button class="btn btn-sm btn-outline" onclick="walletInit('${c}')">Attiva Wallet</button>`}
+                    </div>`;
+                }).join('')}
+            </div>
+            <h3 style="margin-top:1.5rem">📜 Transazioni recenti</h3>
+            ${txData.transactions.length === 0 ? '<p style="color:var(--text-muted)">Nessuna transazione</p>' : `
+                <div class="tx-list">
+                    ${txData.transactions.map(t => `
+                        <div class="tx-item ${t.amount > 0 ? 'tx-in' : 'tx-out'}">
+                            <div class="tx-info">
+                                <span class="tx-type">${t.type}</span>
+                                <span class="tx-ref">${t.reference ? escapeHtml(t.reference) : '—'}</span>
+                            </div>
+                            <div class="tx-amount">${t.amount > 0 ? '+' : ''}${t.amount.toFixed(8)} ${escapeHtml(t.currency)}</div>
+                            <div class="tx-date">${timeAgo(t.createdAt)}</div>
+                        </div>`).join('')}
+                </div>`}`;
+    } catch (err) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore caricamento wallet</p></div>';
+    }
+}
+
+async function walletInit(currency) {
+    try {
+        await api(`/wallet/init?currency=${currency}`, { method: 'POST' });
+        showToast(`Wallet ${currency} attivato!`, 'success');
+        loadWallet();
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+async function walletDeposit(currency) {
+    const amount = prompt(`Importo da depositare (${currency}):`);
+    if (!amount || isNaN(amount) || parseFloat(amount) <= 0) return;
+    const txId = prompt('TX ID della transazione:');
+    if (!txId) return;
+    try {
+        await api('/wallet/deposit', { method: 'POST', body: JSON.stringify({ currency, amount: parseFloat(amount), txId }) });
+        showToast('Deposito registrato!', 'success');
+        loadWallet();
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+async function walletWithdraw(currency) {
+    const amount = prompt(`Importo da prelevare (${currency}):`);
+    if (!amount || isNaN(amount) || parseFloat(amount) <= 0) return;
+    const walletAddress = prompt('Indirizzo wallet di destinazione:');
+    if (!walletAddress) return;
+    try {
+        await api('/wallet/withdraw', { method: 'POST', body: JSON.stringify({ currency, amount: parseFloat(amount), walletAddress }) });
+        showToast('Prelievo eseguito!', 'success');
+        loadWallet();
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+// === Wishlist ===
+async function loadWishlist() {
+    const container = document.getElementById('wishlistContent');
+    container.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const items = await api('/wishlist');
+        if (!items || items.length === 0) {
+            container.innerHTML = '<div class="empty-state"><div class="empty-icon">❤️</div><p>La tua wishlist è vuota</p></div>';
+            return;
+        }
+        container.innerHTML = `<h2>❤️ Wishlist</h2>
+            <div class="marketplace-grid">${items.map(w => `
+                <div class="marketplace-card" onclick="navigate('listingDetail',{id:${w.listingId}})">
+                    ${w.listingImageUrl ? `<div class="marketplace-card-img"><img src="${escapeHtml(w.listingImageUrl)}" alt=""></div>` : ''}
+                    <div class="marketplace-card-header">
+                        <span class="marketplace-card-title">${escapeHtml(w.listingTitle)}</span>
+                        <span class="marketplace-card-price">${w.priceCrypto} ${escapeHtml(w.currency)}</span>
+                    </div>
+                    <div class="marketplace-card-footer">
+                        <span>${escapeHtml(w.sellerName)}</span>
+                        <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();toggleWishlist(${w.listingId})">❌ Rimuovi</button>
+                    </div>
+                </div>`).join('')}
+            </div>`;
+    } catch { container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore</p></div>'; }
+}
+
+async function toggleWishlist(listingId) {
+    if (!currentUser) { showModal('login'); return; }
+    try {
+        const res = await api('/wishlist/toggle', { method: 'POST', body: JSON.stringify({ listingId }) });
+        showToast(res.inWishlist ? '❤️ Aggiunto alla wishlist' : '💔 Rimosso dalla wishlist', 'success');
+        // Re-render if on wishlist/listing page
+        const wishlistPage = document.getElementById('pageWishlist');
+        if (wishlistPage && wishlistPage.style.display !== 'none') loadWishlist();
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+// === Vouchers ===
+async function loadMyVouchers() {
+    const container = document.getElementById('vouchersContent');
+    container.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const vouchers = await api('/vouchers/my');
+        container.innerHTML = `
+            <h2>🎟️ I Miei Voucher</h2>
+            <button class="btn btn-primary btn-sm" onclick="showCreateVoucherModal()" style="margin-bottom:1rem">+ Crea Voucher</button>
+            ${vouchers.length === 0 ? '<p style="color:var(--text-muted)">Nessun voucher creato</p>' : `
+                <div class="voucher-list">
+                    ${vouchers.map(v => `
+                        <div class="voucher-card ${!v.isActive ? 'inactive' : ''}">
+                            <div class="voucher-code">${escapeHtml(v.code)}</div>
+                            <div class="voucher-info">
+                                <span>-${v.discountPercent}%${v.maxDiscount ? ` (max ${v.maxDiscount})` : ''}</span>
+                                <span>Usi: ${v.usedCount}/${v.maxUses}</span>
+                                ${v.listingTitle ? `<span>Annuncio: ${escapeHtml(v.listingTitle)}</span>` : '<span>Tutti gli annunci</span>'}
+                                ${v.expiresAt ? `<span>Scade: ${new Date(v.expiresAt).toLocaleDateString('it-IT')}</span>` : ''}
+                            </div>
+                            <div class="voucher-actions">
+                                <button class="btn btn-sm ${v.isActive ? 'btn-outline' : 'btn-primary'}" onclick="toggleVoucher(${v.id})">${v.isActive ? '⏸️ Disattiva' : '▶️ Attiva'}</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteVoucher(${v.id})">🗑️</button>
+                            </div>
+                        </div>`).join('')}
+                </div>`}`;
+    } catch { container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore</p></div>'; }
+}
+
+function showCreateVoucherModal() {
+    showModal('createVoucher');
+}
+
+async function createVoucher(e) {
+    e.preventDefault();
+    const errEl = document.getElementById('voucherError');
+    errEl.textContent = '';
+    try {
+        await api('/vouchers', { method: 'POST', body: JSON.stringify({
+            code: document.getElementById('voucherCode').value.trim(),
+            discountPercent: parseFloat(document.getElementById('voucherDiscount').value),
+            maxDiscount: document.getElementById('voucherMaxDiscount').value ? parseFloat(document.getElementById('voucherMaxDiscount').value) : null,
+            maxUses: parseInt(document.getElementById('voucherMaxUses').value) || 100,
+            expiresAt: document.getElementById('voucherExpiry').value || null,
+            listingId: document.getElementById('voucherListing').value ? parseInt(document.getElementById('voucherListing').value) : null
+        })});
+        closeModal();
+        showToast('Voucher creato!', 'success');
+        loadMyVouchers();
+    } catch (err) { errEl.textContent = err.data?.error || 'Errore'; }
+}
+
+async function toggleVoucher(id) {
+    try { await api(`/vouchers/${id}/toggle`, { method: 'PUT' }); loadMyVouchers(); }
+    catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+async function deleteVoucher(id) {
+    if (!confirm('Eliminare questo voucher?')) return;
+    try { await api(`/vouchers/${id}`, { method: 'DELETE' }); loadMyVouchers(); }
+    catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+// === Vendor Stats ===
+async function loadVendorStats() {
+    const container = document.getElementById('vendorStatsContent');
+    container.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const s = await api('/vendor-stats');
+        container.innerHTML = `
+            <h2>📊 Statistiche Venditore</h2>
+            <div class="admin-stats">
+                <div class="admin-stat"><div class="stat-value">${s.totalSales}</div><div class="stat-label">Vendite Totali</div></div>
+                <div class="admin-stat"><div class="stat-value">${s.totalRevenue.toFixed(4)}</div><div class="stat-label">Ricavo Totale</div></div>
+                <div class="admin-stat"><div class="stat-value">${s.activeListings}</div><div class="stat-label">Annunci Attivi</div></div>
+                <div class="admin-stat"><div class="stat-value">${s.pendingOrders}</div><div class="stat-label">Ordini Pending</div></div>
+                <div class="admin-stat"><div class="stat-value">${s.disputedOrders}</div><div class="stat-label">Dispute</div></div>
+                <div class="admin-stat"><div class="stat-value">${s.averageRating}⭐</div><div class="stat-label">${s.totalReviews} Recensioni</div></div>
+            </div>
+            <h3 style="margin-top:1.5rem">📈 Ultimi 6 mesi</h3>
+            <div class="monthly-stats">
+                ${s.last6Months.map(m => `
+                    <div class="monthly-stat">
+                        <div class="monthly-label">${escapeHtml(m.month)}</div>
+                        <div class="monthly-bar" style="height:${Math.max(m.sales * 10, 4)}px"></div>
+                        <div class="monthly-value">${m.sales} vendite · ${m.revenue.toFixed(4)}</div>
+                    </div>`).join('')}
+            </div>
+            <div class="admin-stats" style="margin-top:1rem">
+                <div class="admin-stat"><div class="stat-value">${s.monthlySales}</div><div class="stat-label">Vendite Mese</div></div>
+                <div class="admin-stat"><div class="stat-value">${s.monthlyRevenue.toFixed(4)}</div><div class="stat-label">Ricavo Mese</div></div>
+            </div>`;
+    } catch { container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore o non sei un venditore</p></div>'; }
+}
+
+// === Reviews ===
+async function submitReview(orderId) {
+    const rating = parseInt(document.getElementById('reviewRating').value);
+    const comment = document.getElementById('reviewComment').value.trim();
+    if (rating < 1 || rating > 5) return showToast('Rating deve essere da 1 a 5', 'error');
+    try {
+        await api('/reviews', { method: 'POST', body: JSON.stringify({ orderId, rating, comment: comment || null }) });
+        showToast('Recensione inviata!', 'success');
+        loadOrderDetail(orderId);
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+// === 2FA Settings ===
+async function load2FASettings() {
+    const container = document.getElementById('twofaContent');
+    container.innerHTML = '<div class="loading">Caricamento</div>';
+    try {
+        const status = await api('/2fa/status');
+        if (status.enabled) {
+            container.innerHTML = `
+                <h2>🔐 Autenticazione 2FA</h2>
+                <div class="twofa-status enabled">
+                    <p>✅ 2FA è <strong>ATTIVO</strong></p>
+                    <div class="form-group">
+                        <label>Per disattivare, inserisci il codice attuale:</label>
+                        <input type="text" id="disable2FACode" placeholder="123456" maxlength="6">
+                        <button class="btn btn-danger btn-sm" onclick="disable2FA()" style="margin-top:0.5rem">Disattiva 2FA</button>
+                    </div>
+                </div>`;
+        } else {
+            container.innerHTML = `
+                <h2>🔐 Autenticazione 2FA</h2>
+                <div class="twofa-status disabled">
+                    <p>⚠️ 2FA è <strong>NON ATTIVO</strong></p>
+                    <button class="btn btn-primary" onclick="setup2FA()">Configura 2FA</button>
+                </div>
+                <div id="twofaSetup"></div>`;
+        }
+    } catch { container.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><p>Errore</p></div>'; }
+}
+
+async function setup2FA() {
+    try {
+        const res = await api('/2fa/setup', { method: 'POST' });
+        document.getElementById('twofaSetup').innerHTML = `
+            <div class="twofa-setup-box">
+                <h3>Scansiona questo QR Code con la tua app (Google Authenticator, Authy, ecc.)</h3>
+                <div class="twofa-secret"><code>${escapeHtml(res.secret)}</code></div>
+                <p style="color:var(--text-muted);font-size:11px">URI: ${escapeHtml(res.qrCodeUri)}</p>
+                <div class="form-group" style="margin-top:1rem">
+                    <label>Inserisci il codice generato per verificare:</label>
+                    <input type="text" id="verify2FACode" placeholder="123456" maxlength="6">
+                    <button class="btn btn-primary btn-sm" onclick="enable2FA()" style="margin-top:0.5rem">Verifica e Attiva</button>
+                </div>
+            </div>`;
+    } catch (err) { showToast(err.data?.error || 'Errore', 'error'); }
+}
+
+async function enable2FA() {
+    const code = document.getElementById('verify2FACode').value.trim();
+    if (!code) return showToast('Inserisci il codice', 'error');
+    try {
+        await api('/2fa/enable', { method: 'POST', body: JSON.stringify({ code }) });
+        showToast('2FA attivato con successo!', 'success');
+        load2FASettings();
+    } catch (err) { showToast(err.data?.error || 'Codice non valido', 'error'); }
+}
+
+async function disable2FA() {
+    const code = document.getElementById('disable2FACode').value.trim();
+    if (!code) return showToast('Inserisci il codice', 'error');
+    try {
+        await api('/2fa/disable', { method: 'POST', body: JSON.stringify({ code }) });
+        showToast('2FA disattivato', 'success');
+        load2FASettings();
+    } catch (err) { showToast(err.data?.error || 'Codice non valido', 'error'); }
 }
