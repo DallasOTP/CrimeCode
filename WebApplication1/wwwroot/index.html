@@ -1,61 +1,3 @@
-        <!-- Account Dashboard -->
-        <div id="pageDashboard" style="display:none">
-            <div class="dashboard-container">
-                <aside class="dashboard-sidebar">
-                    <div class="dashboard-user">
-                        <div class="dashboard-avatar" id="dashboardAvatar"></div>
-                        <div class="dashboard-username" id="dashboardUsername">User</div>
-                        <div class="dashboard-role" id="dashboardRole">User</div>
-                    </div>
-                    <nav class="dashboard-menu">
-                        <a href="#" onclick="showDashboardSection('account')" id="dashAccountBtn"><span>👤</span> My account</a>
-                        <a href="#" onclick="showDashboardSection('deposit')"><span>➕</span> Deposit</a>
-                        <a href="#" onclick="showDashboardSection('orders')"><span>📋</span> My orders</a>
-                        <a href="#" onclick="showDashboardSection('withdraw')"><span>💸</span> Withdraw</a>
-                        <a href="#" onclick="showDashboardSection('messenger')"><span>💬</span> Messenger</a>
-                        <a href="#" onclick="showDashboardSection('tickets')"><span>🎫</span> Tickets</a>
-                        <a href="#" onclick="showDashboardSection('block')"><span>⛔</span> Block users</a>
-                    </nav>
-                </aside>
-                <section class="dashboard-main" id="dashboardMain">
-                    <!-- Sezioni dinamiche -->
-                    <div id="dashboardSectionAccount" style="display:none">
-                        <h2>My account</h2>
-                        <div class="account-edit-form">
-                            <div class="edit-avatar-block">
-                                <div class="edit-avatar" id="editAvatar"></div>
-                                <button class="btn btn-outline btn-sm" onclick="showModal('avatar')">Edit avatar</button>
-                            </div>
-                            <form onsubmit="saveAccountInfo(event)">
-                                <div class="input-group"><label>Username</label><input type="text" id="editUsername" required></div>
-                                <div class="input-group"><label>Email</label><input type="email" id="editEmail" required></div>
-                                <div class="input-group"><label>Bio</label><textarea id="editBio" rows="2"></textarea></div>
-                                <button type="submit" class="btn btn-primary">Save</button>
-                            </form>
-                        </div>
-                    </div>
-                    <div id="dashboardSectionTickets" style="display:none">
-                        <div class="dashboard-tickets-header">
-                            <h2>Tickets</h2>
-                            <button class="btn btn-accent" onclick="showModal('newTicket')">+ New ticket</button>
-                        </div>
-                        <div id="dashboardTicketsList"></div>
-                    </div>
-                    <!-- Altre sezioni: deposit, orders, withdraw, messenger, block... -->
-                </section>
-            </div>
-        </div>
-
-        <!-- Modale nuovo ticket -->
-        <div id="modalNewTicket" class="modal" style="display:none">
-            <h2>New Ticket</h2>
-            <form onsubmit="submitNewTicket(event)">
-                <div class="input-group"><label>Subject</label><input type="text" id="ticketSubject" required></div>
-                <div class="input-group"><label>Message</label><textarea id="ticketMessage" rows="4" required></textarea></div>
-                <div class="modal-error" id="ticketError"></div>
-                <button type="submit" class="btn btn-primary">Send</button>
-            </form>
-        </div>
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -152,6 +94,65 @@
 
     <!-- Main Content -->
     <main class="main" id="mainContent">
+
+        <!-- Account Dashboard -->
+        <div id="pageDashboard" style="display:none">
+            <div class="dashboard-container">
+                <aside class="dashboard-sidebar">
+                    <div class="dashboard-user">
+                        <div class="dashboard-avatar" id="dashboardAvatar"></div>
+                        <div class="dashboard-username" id="dashboardUsername">User</div>
+                        <div class="dashboard-role" id="dashboardRole">User</div>
+                    </div>
+                    <nav class="dashboard-menu">
+                        <a href="#" onclick="showDashboardSection('account')" id="dashAccountBtn"><span>&#x1F464;</span> My account</a>
+                        <a href="#" onclick="showDashboardSection('deposit')"><span>&#x2795;</span> Deposit</a>
+                        <a href="#" onclick="showDashboardSection('orders')"><span>&#x1F4CB;</span> My orders</a>
+                        <a href="#" onclick="showDashboardSection('withdraw')"><span>&#x1F4B8;</span> Withdraw</a>
+                        <a href="#" onclick="showDashboardSection('messenger')"><span>&#x1F4AC;</span> Messenger</a>
+                        <a href="#" onclick="showDashboardSection('tickets')"><span>&#x1F3AB;</span> Tickets</a>
+                        <a href="#" onclick="showDashboardSection('block')"><span>&#x26D4;</span> Block users</a>
+                    </nav>
+                </aside>
+                <section class="dashboard-main" id="dashboardMain">
+                    <!-- Sezioni dinamiche -->
+                    <div id="dashboardSectionAccount" style="display:none">
+                        <h2>My account</h2>
+                        <div class="account-edit-form">
+                            <div class="edit-avatar-block">
+                                <div class="edit-avatar" id="editAvatar"></div>
+                                <button class="btn btn-outline btn-sm" onclick="showModal('avatar')">Edit avatar</button>
+                            </div>
+                            <form onsubmit="saveAccountInfo(event)">
+                                <div class="input-group"><label>Username</label><input type="text" id="editUsername" required></div>
+                                <div class="input-group"><label>Email</label><input type="email" id="editEmail" required></div>
+                                <div class="input-group"><label>Bio</label><textarea id="editBio" rows="2"></textarea></div>
+                                <button type="submit" class="btn btn-primary">Save</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div id="dashboardSectionTickets" style="display:none">
+                        <div class="dashboard-tickets-header">
+                            <h2>Tickets</h2>
+                            <button class="btn btn-accent" onclick="showModal('newTicket')">+ New ticket</button>
+                        </div>
+                        <div id="dashboardTicketsList"></div>
+                    </div>
+                    <!-- Altre sezioni: deposit, orders, withdraw, messenger, block... -->
+                </section>
+            </div>
+        </div>
+
+        <!-- Modale nuovo ticket -->
+        <div id="modalNewTicket" class="modal" style="display:none">
+            <h2>New Ticket</h2>
+            <form onsubmit="submitNewTicket(event)">
+                <div class="input-group"><label>Subject</label><input type="text" id="ticketSubject" required></div>
+                <div class="input-group"><label>Message</label><textarea id="ticketMessage" rows="4" required></textarea></div>
+                <div class="modal-error" id="ticketError"></div>
+                <button type="submit" class="btn btn-primary">Send</button>
+            </form>
+        </div>
 
         <!-- Landing Page (visible when not logged in) -->
         <div id="pageLanding">
